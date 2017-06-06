@@ -1,3 +1,5 @@
+# Non-blocking atomic wait for ECMAScript
+
 A proposal for a "non-blocking atomic wait" for ECMAScript, primarily
 for use in agents that are not allowed to block.
 
