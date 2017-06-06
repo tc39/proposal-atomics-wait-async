@@ -1,19 +1,13 @@
 # Atomics.waitNonblocking (preliminary proposal)
 
-Author:  Lars T Hansen (lhansen@mozilla.com)
-Date:    April 20, 2017
-
-Updated: April 25, 2017
-         Elaborated on the API variant that can return Promise or string.
-         Clarifications throughout.
-
+Author: Lars T Hansen (lhansen@mozilla.com), April 2017
 
 ## Overview and background
 
 We provide a new API, `Atomics.waitNonblocking`, that an agent can use
 to wait on a shared memory location (to later be awoken by some agent
 calling `Atomics.wake` on that location) without blocking.  Notably
-this API is useful in agents whose [[CanBlock]] attribute is `false`,
+this API is useful in agents whose `[[CanBlock]]` attribute is `false`,
 such as the main thread of a web browser document, but the API is not
 restricted to such agents.
 
@@ -27,7 +21,7 @@ web browsers.  A simple polyfill is possible but a native
 implementation will likely have much better performance (both memory
 footprint and execution time) than the polyfill.
 
-Examples of usage: see waitNonblocking.html in this directory.
+Examples of usage: see `example.html` in this directory.
 
 Prior history: Related APIs have been proposed before, indeed one
 variant was in early drafts of the shared memory proposal under the
@@ -48,7 +42,7 @@ argument checking fails an exception is thrown synchronously, as for
 * `timeout`, if present, is a timeout value
 
 The `result` is a promise.  The promise can be resolved with a string
-value, one of "ok", "timed-out", "not-equal"; the value has the same
+value, one of `"ok"`, `"timed-out"`, `"not-equal"`; the value has the same
 meaning as for the return type of `Atomics.wait`.  The promise is
 never rejected.
 
@@ -106,15 +100,12 @@ of an implementation that creates a new helper agent for each
 asynchronous signal to the originating agent to resolve the promise
 with the appropriate result value.
 
-
 ## Known open questions
 
-- Whether `waitNonblocking` should always return a Promise or can
+* Whether `waitNonblocking` should always return a Promise or can
   return a Promise or a string.
-
-- What we can and cannot require about wake order when wake order is
+* What we can and cannot require about wake order when wake order is
   observable.
-
 
 ## Polyfills
 
@@ -156,12 +147,12 @@ that would mean for a minute, here are some cases where the result of
 the `waitNonblocking` could be available directly:
 
 * The value in the array does not match the expected value and we can
-  resolve synchronously with "not-equal"
+  resolve synchronously with `"not-equal"`
 * The value in the array matches and we have to sleep, but we want to
   micro-wait to see if a wakeup is received soon, in which case we can
-  resolve synchronously with "ok"
+  resolve synchronously with `"ok"`
 * The value in the array matches but the timeout is zero, in which
-  case we can resolve synchronously with "timed-out"
+  case we can resolve synchronously with `"timed-out"`
 
 The first case is probably somewhat important.
 
@@ -173,7 +164,7 @@ producer-consumer problems involving a nonblocking thread.
 The third case is not important; it is just a mystification of
 `Atomics.load`.
 
-Note that we can never resolve synchronously with "timed-out" if the
+Note that we can never resolve synchronously with `"timed-out"` if the
 timeout is nonzero because we don't know if the waiting agent is going
 to take action to perform the wakeup after setting up the wait.
 
@@ -182,7 +173,7 @@ where performance is not important, we don't even notice that there is
 an optimization opportunity because `await` coerces the string to a
 Promise:
 
-```
+```js
   switch(await Atomics.waitNonblocking(ia, idx, v)) {
     case "ok": ...
     case "timed-out": ...
@@ -192,7 +183,7 @@ Promise:
 
 And when we do care about the fast path, it's pretty sweet:
 
-```
+```js
   let r = Atomics.waitNonblocking(ia, idx, v);
   switch (r instanceof Promise ? (await r) : r) {
     case "ok": ...
@@ -204,7 +195,7 @@ And when we do care about the fast path, it's pretty sweet:
 With plain promises it's messier, this is perhaps what the first case
 would look like:
 
-```
+```js
   let r = Atomics.waitNonblocking(ia, idx, v);
   (r instanceof Promise ? r : Promise.resolve(r)).then(function (v) {
     switch (v) {
@@ -216,7 +207,7 @@ would look like:
 
 And the second case might look like this:
 
-```
+```js
   let r = Atomics.waitNonblocking(ia, idx, v);
   let k = function (r) {
     switch (r) {
