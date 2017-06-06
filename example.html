@@ -1,0 +1,36 @@
+<script src="polyfill.js"></script>
+<script>
+  var sab = new SharedArrayBuffer(4096);
+  var ia = new Int32Array(sab);
+  ia[37] = 0x1337;
+  test1();
+  
+  function test1() {
+    Atomics.waitNonblocking(ia, 37, 0x1337, 1000).then(function (r) { console.log("Resolved: " + r); test2(); });
+  }
+
+  var code = `
+  var ia = null;
+  onmessage = function (ev) {
+    if (!ia) {
+      console.log("Aux worker is running");
+      ia = new Int32Array(ev.data);
+    }
+    console.log("Aux worker is sleeping for a little bit");
+    setTimeout(function () { console.log("Aux worker is waking"); Atomics.wake(ia, 37); }, 1000);
+  }`;
+
+  function test2() {
+    var w = new Worker("data:application/javascript," + encodeURIComponent(code));
+    w.postMessage(sab);
+    Atomics.waitNonblocking(ia, 37, 0x1337).then(function (r) { console.log("Resolved: " + r); test3(w); });
+  }
+
+  function test3(w) {
+    w.postMessage(false);
+    Atomics.waitNonblocking(ia, 37, 0x1337).then(function (r) { console.log("Resolved 1: " + r); });
+    Atomics.waitNonblocking(ia, 37, 0x1337).then(function (r) { console.log("Resolved 2: " + r); });
+    Atomics.waitNonblocking(ia, 37, 0x1337).then(function (r) { console.log("Resolved 3: " + r); });
+    
+  }
+</script>
