@@ -1,4 +1,4 @@
-# Atomics.waitNonblocking (preliminary proposal)
+# Atomics.waitNonblocking (Stage 1 proposal)
 
 Author: Lars T Hansen (lhansen@mozilla.com), April 2017
 
