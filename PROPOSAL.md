@@ -106,6 +106,8 @@ with the appropriate result value.
   return a Promise or a string.
 * What we can and cannot require about wake order when wake order is
   observable.
+* Whether `waitNonblocking` is a desirable name.  I'm told there was
+  a lot of resistance to it at the May 2017 TC39 meeting.
 
 ## Polyfills
 
