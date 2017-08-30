@@ -5,25 +5,25 @@
  * Author: Lars T Hansen, lhansen@mozilla.com
  */
 
-/* Polyfill for Atomics.waitNonblocking() for web browsers
+/* Polyfill for Atomics.waitAsync() for web browsers
  *
  * Any kind of agent that is able to create a new Worker can use this polyfill.
  *
- * Load this file in all agents that will use Atomics.waitNonblocking.
+ * Load this file in all agents that will use Atomics.waitAsync.
  *
- * Agents that don't call Atomics.waitNonblocking need do nothing special.
+ * Agents that don't call Atomics.waitAsync need do nothing special.
  *
  * Any kind of agent can wake another agent that is sleeping in
- * Atomics.waitNonblocking by just calling Atomics.wake for the location being
+ * Atomics.waitAsync by just calling Atomics.wake for the location being
  * slept on, as normal.
  *
- * In this polyfill, Atomics.waitNonblocking is not very fast.
+ * In this polyfill, Atomics.waitAsync is not very fast.
  */
 
 /* Design considerations:
  *
- * An agent can have multiple nonblocking waits outstanding at the same time,
- * and can be woken for them in any order.
+ * An agent can have multiple async waits outstanding at the same time, and can
+ * be woken for them in any order.
  *
  * Indeed those multiple waits can be on the same location.
  */
@@ -68,12 +68,12 @@
 	helpers.push(h);
     }
 
-    // Atomics.waitNonblocking always returns a promise.  Throws standard errors
+    // Atomics.waitAsync always returns a promise.  Throws standard errors
     // for parameter validation.  The promise is resolved with a string as from
     // Atomics.wait, or, in the case something went completely wrong, it is
     // rejected with an error string.
 
-    Atomics.waitNonblocking = function (ia, index_, value_, timeout_) {
+    Atomics.waitAsync = function (ia, index_, value_, timeout_) {
 	if (typeof ia != "object" || !(ia instanceof Int32Array) || !(ia.buffer instanceof SharedArrayBuffer))
 	    throw new TypeError("Expected shared memory");
 
