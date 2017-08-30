@@ -1,6 +1,6 @@
-# Non-blocking atomic wait for ECMAScript
+# Asynchronous atomic wait for ECMAScript
 
-A proposal for a "non-blocking atomic wait" for ECMAScript, primarily
+A proposal for an "asynchronous atomic wait" for ECMAScript, primarily
 for use in agents that are not allowed to block.
 
 Champions: Shu-yu Guo (Bloomberg) and Lars T Hansen (Mozilla).
