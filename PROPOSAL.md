@@ -46,9 +46,6 @@ value, one of `"ok"`, `"timed-out"`, `"not-equal"`; the value has the same
 meaning as for the return type of `Atomics.wait`.  The promise is
 never rejected.
 
-(See "Performance and optimizations" below for a discussion of more
-interesting result values.)
-
 Agents can call `Atomics.wake` on some location corresponding to
 `i32a[index]` to wake any agent waiting with
 `Atomics.waitAsync`.  The agent performing the wake does not
@@ -83,7 +80,7 @@ on that location to resolve that promise within itself.
 More generally, an agent can `waitAsync` on a location and only
 subsequent to that take action that will cause some agent to perform a
 `wake`.  For this reason, an implementation of `waitAsync` that
-blocks is not viable (though see the Performance section).
+blocks is not viable.
 
 Agents that wait with `waitAsync` participate in the same
 fairness scheme as agents that wait with `wait`: When an agent
@@ -100,10 +97,6 @@ of an implementation that creates a new helper agent for each
 asynchronous signal to the originating agent to resolve the promise
 with the appropriate result value.
 
-## Known open questions
-
-* What we can and cannot require about wake order when wake order is
-  observable.
 
 ## Polyfills
 
@@ -139,14 +132,11 @@ strategy for Firefox, for example).
 
 ## Performance and optimizations
 
-### Synchronous resolution
+### Synchronous resolution (rejected)
 
 For performance reasons it might appear that it is desirable to
 "resolve the promise synchronously" if possible.  Leaving aside what
 that would mean for a minute, this was explored and the committee
-decided it did not like the complexity of it.  Additionally,
-it's easy enough to handle manually when it is necessary.
-
-See SYNC-RESOLVE.md for an older writeup of some of the details around
-this idea.
-
+decided it did not like the complexity of it.  Additionally, it's easy
+enough to handle manually when it is necessary.  See SYNC-RESOLVE.md
+for a writeup of the details around this idea.
