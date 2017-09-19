@@ -32,7 +32,7 @@ name `Atomics.futexWaitCallback`.
 
 `Atomics.waitAsync(i32a, index, value, [timeout]) => result`
 
-The arguments are intepreted and checked as for `Atomics.wait`.  If
+The arguments are interpreted and checked as for `Atomics.wait`.  If
 argument checking fails an exception is thrown synchronously, as for
 `Atomics.wait`.
 
@@ -87,54 +87,218 @@ agents are woken in a predictable order.
 
 ## Semantics
 
+Several changes to the existing spec are necessary to accomodate
+`Atomics.asyncWait`.  These changes are not in themselves intended to
+change semantics.
+
+Primarily, timeouts are made less magical by introducing a notion of
+concurrent "alarms" which are thunks that are run in response to
+expired timeouts and perform wakeups using the standard mechanisms.
+Alarms are named by IDs and sets of these IDs hang off the
+WaiterLists.  The sets are in some sense optional, but clarify the
+coordination between alarms and explict wakeups as well as the
+lifetime of the alarm thunks.
+
+Secondarily, the job of removing a waiter has been moved to the thread
+performing a wakeup, whether that is another agent performing a `wake`
+or the concurrent alarm thread.
+
+With that background, the changes necessary to add `asyncWait` boil
+down to generalizing the WaiterList to hold both sync and async
+waiters, and to inserting waiters into that list by priority.
+
+
 24.4.1.3, GetWaiterList
 
-The _WaiterList_ is generalized from holding agent signifiers to
-holding pairs of (agent_signifier, promise|empty).  Waiters that are
-waiting in `Atomics.wait` will have an entry where the second element
-of the pair is the empty value; waiters that are waiting in
-`Atomics.asyncWait` will have an entry where the second element of the
-pair is the promise that is to be resolved when the agent is awoken.
+Change this section as follows.
 
-There can now be multiple entries in a _WaiterList_ with the same
-agent signifier, but at most one of those will have an empty value in
-the second element of the entry.
+Before the first paragraph, insert this paragraph:
 
-24.4.1.6, AddWaiter
+"A _Waiter_ is a pair (_agent_, false | _promise_) where _agent_ is
+the agent signifier of the agent that is waiting.  Agents that are
+waiting in `Atomics.wait` will be designated by a waiter where the
+second element of the pair is false; agents that are waiting in
+`Atomics.asyncWait` will be designated by a waiter where the second
+element of the pair is the promise that is to be resolved when the
+agent is awoken."
 
-TODO: this must take a promise value | empty
+In the current first paragraph, change the word "agent" to "waiter".
 
-TODO: the assertion in step 2 is actually wrong now
+After the current first paragraph, insert these two paragraphs:
 
-TODO: anyway we need to spec what it means for an agent to be on the list
+"There can be multiple entries in a _WaiterList_ with the same agent
+signifier, but at most one of those will have false in the second
+element of the entry."
 
-24.4.1.7, RemoveWaiter
+"The _WaiterList_ has an attached _alarm set_, a set of truthy values.
+This set is manipulated only when the thread manipulating it is in the
+critical section for the _WaiterList_."
 
-TODO: This probably has a return value now, the promise | empty value
+In the current third paragraph, add "adding and removing alarms" to
+the list of guarded operations.
 
-24.4.1.8, RemoveWaiters
+Spec note: The alarm may perhaps be further formalized so that the
+clause about the possibly absent alarm ID is not needed in the spec of
+CancelAlarm, but I'm not sure this would actually clarify anything.
 
-TODO: This now returns a list of pairs, not simply a list of agent ids
 
-24.4.1.10, WakeWaiter
+24.4.1.6, AddWaiter( _WL_, _W_, _promise_ )
 
-TODO: The notion of waking an agent in step 3 is complicated, and
-depends on in what sense W is on the WL.  If it is a promise it means
-creating a job.
+The abstract operation AddWaiter takes three arguments, a WaiterList
+_WL_, an agent signifier _W_, and _promise_, which is either false or
+a Promise object. It performs the following steps:
 
-24.4.15, Atomics.asyncWait [new section, may be inserted elsewhere in the alpha order]
+* Assert: The calling agent is in the critical section for _WL_.
+* Assert: (_W_, _promise_) is not on the list of waiters in any WaiterList.
+* If _promise_ is false:
+** Insert (_W_, false) into the list of waiters in _WL_ before any other entry (_W_, _x_) in the list.
+* Else,
+** Add (_W_, _promise_) to the end of the list of waiters in _WL_.
 
-TODO: Implement this.  Roughly:
 
-1-5: like Atomics.wait 1-5
-6-13: like Atomics.wait 8-15
-14: create some kind of promise P
-15: some kind of timeout handling??  Maybe we end up with
-    an explicit timeout mechanism here and use it for both
-    kinds of wait, rather than the hand-wavy thing in Suspend()
-16: addwaiter the (agent,P)
-17: LeaveCriticalSection
-18: return P
+24.4.1.7, RemoveWaiter( _WL_, _W_, _promise_ )
+
+The abstract operation RemoveWaiter takes three arguments, a
+WaiterList _WL_, an agent signifier _W_, and _promise_, which is
+either false or a Promise object. It performs the following steps:
+
+* Assert: The calling agent is in the critical section for _WL_.
+* Assert: (_W_, _promise_) is on the list of waiters in _WL_.
+* Remove (_W_, _promise_) from the list of waiters in _WL_. 
+
+
+24.4.1.9, Suspend( _WL_, _W_)
+
+Change this function not to take a 'timeout' argument.  Timeouts are
+now handled in the caller.  (Not intended as a semantic change.)
+
+Change step 5 to be this:
+
+* Perform LeaveCriticalSection(WL) and suspend W, performing the
+  combined operation in such a way that a wakeup that arrives after
+  the critical section is exited but before the suspension takes
+  effect is not lost. W can wake up only because it was woken
+  explicitly by another agent calling WakeWaiter(WL, W), not for any
+  other reasons at all.
+
+Remove steps 7 and 8.
+
+
+24.4.1.10, WakeWaiter( _WL_, _W_, _promise_ )
+
+The abstract operation WakeWaiter takes three arguments, a WaiterList
+_WL_, an agent signifier _W_, and _promise_, which is either false or
+a Promise object. It performs the following steps:
+
+* Assert: The calling agent is in the critical section for _WL_.
+* Assert: (_W_, _promise_) is on the list of waiters in _WL_.
+* If _promise_ is false:
+** Wake the agent _W_. 
+* Else,
+** Make _promise_ resolveable.  (Spec details TBD.)
+
+
+24.4.1.13, AddAlarm(_WL_, _alarmFn_, _timeout_)
+
+Spec note: A new section.
+
+AddAlarm takes three arguments, a WaiterList _WL_, a thunk _alarmFn_,
+and a nonnegative finite number _timeout_.  It performs the following
+steps:
+
+* Assert: the current thread is in the critical section on _WL_.
+* Let _alarm_ be a truthy value that is not in _WL_'s alarm set.
+* Add _alarm_ to _WL_'s alarm set.
+* After _timeout_ milliseconds has passed, perform the following actions on a concurrent thread:
+** Perform EnterCriticalSection(_WL_).
+** If _alarm_ is in _WL_'s alarm set:
+*** Remove _alarm_ from _WL_'s alarm set.
+*** Perform _alarmFn_().
+** Perform LeaveCriticalSection(_WL_).
+** Note: _alarmFn_ is now dead.
+* Return _alarm_.
+
+
+24.4.1.4, CancelAlarm(_WL_, _alarm_)
+
+Spec note: A new section.
+
+CancelAlarm takes two arguments, a WaiterList _WL_ and an alarm ID
+_alarm_.  It performs the following steps:
+
+* Assert: the current thread is in the critical section on _WL_
+* Assert: _alarm_ is not false.
+* Remove _alarm_ from _WL_'s alarm set (it may not be present).
+* Note: the thunk associated with _alarm_ is now dead.
+
+
+24.4.11, Atomics.wait(_typedArray_, _index_, _value_, _timeout_)
+
+Replace Steps 16-19 with the following:
+
+* Perform AddWaiter(_WL_, _W_, false).
+* Let _awoken_ be true.
+* Let _alarm_ be false.
+* If _q_ is finite then:
+** Let _alarmFn_ be a function of no arguments that does the following:
+*** Set _awoken_ to false.
+*** Perform RemoveWaiter(_WL_, _W_, false)
+*** Perform WakeWaiter(_WL_, _W_, false).
+** Set _alarm_ to AddAlarm(_WL_, _alarmFn_, _q_).
+* Perform Suspend(_WL_, _W_)
+* If _awoken_ is true and _alarm_ is not false:
+** Perform CancelAlarm(_WL_, _alarm_)
+* Assert: (_W_, false) is not on the list of waiters in WL.
+
+
+24.4.12, Atomics.wake(_typedArray_, _index_, _count_)
+
+Modify this algorithm as follows:
+
+In step 12.a., change the word _agent_ to the work _waiter_.
+
+(RemoveWaiters no longer returns a list of pairs, but a list of
+waiters, which are (_agent_, false | Promise) pairs.)
+
+
+24.4.15, Atomics.asyncWait( _typedArray_, _index_, _value_, _timeout_ )
+
+Spec note: A new section.  This is substantially similar to Atomics.wait.
+
+* Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_, true).
+* Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
+* Let _v_ be ? ToInt32(_value_).
+* Let _q_ be ? ToNumber(_timeout_).
+* If _q_ is NaN, let _t_ be + infinity, else let _t_ be max(_q_, 0).
+* Let _block_ be _buffer_.[[ArrayBufferData]].
+* Let _offset_ be _typedArray_.[[ByteOffset]].
+* Let _indexedPosition_ be (_i_ × 4) + _offset_.
+* Let _WL_ be GetWaiterList(_block_, _indexedPosition_).
+* Perform EnterCriticalSection(_WL_).
+* Let _w_ be ! AtomicLoad(_typedArray_, _i_).
+* If _v_ is not equal to _w_, then
+** Perform LeaveCriticalSection(_WL_).
+** Return a new Promise resolved with the String "not-equal" (as for Promise.resolve)
+* Let _W_ be AgentSignifier().
+* Let _awoken_ be true.
+* Let _alarm_ be false.
+* Let _executor_ be a function of two arguments, _resolve_ and _reject_, that does the following:
+** If _awoken_ is true then
+*** If _alarm_ is not false:
+**** Perform CancelAlarm(_WL_, _alarm_)
+*** Invoke _resolve_ on the string "ok"
+** else
+*** Invoke _resolve_ on the string "timed-out"
+* Let _P_ be a new Promise created with the executor _executor_
+* If _q_ is finite:
+** Let _alarmFn_ be a function of no arguments that does the following:
+*** Set _awoken_ to true.
+*** Perform RemoveWaiter(_WL_, _W_, _P_)
+*** Perform WakeWaiter(_WL_, _W_, _P_)
+** Set _alarm_ to AddAlarm(_WL_, _alarmFn_, _q_)
+* Perform AddWaiter(_WL_, _W_, _P_)
+* Perform LeaveCriticalSection(_WL_).
+* Return _P_.
 
 
 ## Polyfills
@@ -150,8 +314,8 @@ value.
 
 This polyfill models every situation, POSSIBLY except for the
 situation where an agent performs a `waitAsync` followed by a `wait`
-and another agent then asks to wake just one waiter - MAYBE in the
-real semantics, the `wait` is woken first, in the polyfill the
+and another agent subsequently asks to wake just one waiter - MAYBE in
+the real semantics, the `wait` is woken first, in the polyfill the
 `asyncWait` is woken first.  NOTE: exact real semantics TBD.
 
 As suggested by the semantics, in the Web domain it uses a helper
