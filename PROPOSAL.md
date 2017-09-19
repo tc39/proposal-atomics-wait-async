@@ -311,11 +311,11 @@ the wait is complete, it sends an asynchronous signal to the
 originating agent to resolve the promise with the appropriate result
 value.
 
-This polyfill models every situation, POSSIBLY except for the
+This polyfill models every situation, except for the
 situation where an agent performs a `waitAsync` followed by a `wait`
-and another agent subsequently asks to wake just one waiter - MAYBE in
+and another agent subsequently asks to wake just one waiter - in
 the real semantics, the `wait` is woken first, in the polyfill the
-`asyncWait` is woken first.  NOTE: exact real semantics TBD.
+`asyncWait` is woken first.
 
 As suggested by the semantics, in the Web domain it uses a helper
 Worker that performs a synchronous `wait` on behalf of the agent that
