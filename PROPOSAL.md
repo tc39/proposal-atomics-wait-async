@@ -108,7 +108,7 @@ down to generalizing the WaiterList to hold both sync and async
 waiters, and to inserting waiters into that list by priority.
 
 
-24.4.1.3, GetWaiterList
+### 24.4.1.3, GetWaiterList
 
 Change this section as follows.
 
@@ -142,7 +142,7 @@ clause about the possibly absent alarm ID is not needed in the spec of
 CancelAlarm, but I'm not sure this would actually clarify anything.
 
 
-24.4.1.6, AddWaiter( _WL_, _W_, _promise_ )
+### 24.4.1.6, AddWaiter( _WL_, _W_, _promise_ )
 
 The abstract operation AddWaiter takes three arguments, a WaiterList
 _WL_, an agent signifier _W_, and _promise_, which is either false or
@@ -156,7 +156,7 @@ a Promise object. It performs the following steps:
    1. Add (_W_, _promise_) to the end of the list of waiters in _WL_.
 
 
-24.4.1.7, RemoveWaiter( _WL_, _W_, _promise_ )
+### 24.4.1.7, RemoveWaiter( _WL_, _W_, _promise_ )
 
 The abstract operation RemoveWaiter takes three arguments, a
 WaiterList _WL_, an agent signifier _W_, and _promise_, which is
@@ -167,7 +167,7 @@ either false or a Promise object. It performs the following steps:
 1. Remove (_W_, _promise_) from the list of waiters in _WL_. 
 
 
-24.4.1.9, Suspend( _WL_, _W_)
+### 24.4.1.9, Suspend( _WL_, _W_)
 
 Change this function not to take a 'timeout' argument.  Timeouts are
 now handled in the caller.  (Not intended as a semantic change.)
@@ -179,7 +179,7 @@ Change step 5 to be this:
 Remove steps 7 and 8.
 
 
-24.4.1.10, WakeWaiter( _WL_, _W_, _promise_ )
+### 24.4.1.10, WakeWaiter( _WL_, _W_, _promise_ )
 
 The abstract operation WakeWaiter takes three arguments, a WaiterList
 _WL_, an agent signifier _W_, and _promise_, which is either false or
@@ -193,7 +193,7 @@ a Promise object. It performs the following steps:
    1. Make _promise_ resolveable.  (Spec details TBD.)
 
 
-24.4.1.13, AddAlarm(_WL_, _alarmFn_, _timeout_)
+### 24.4.1.13, AddAlarm(_WL_, _alarmFn_, _timeout_)
 
 Spec note: A new section.
 
@@ -214,7 +214,7 @@ steps:
 1. Return _alarm_.
 
 
-24.4.1.4, CancelAlarm(_WL_, _alarm_)
+### 24.4.1.4, CancelAlarm(_WL_, _alarm_)
 
 Spec note: A new section.
 
@@ -227,7 +227,7 @@ _alarm_.  It performs the following steps:
 1. Note: the thunk associated with _alarm_ is now dead.
 
 
-24.4.11, Atomics.wait(_typedArray_, _index_, _value_, _timeout_)
+### 24.4.11, Atomics.wait(_typedArray_, _index_, _value_, _timeout_)
 
 Replace Steps 16-19 with the following:
 
@@ -246,7 +246,7 @@ Replace Steps 16-19 with the following:
 1. Assert: (_W_, false) is not on the list of waiters in WL.
 
 
-24.4.12, Atomics.wake(_typedArray_, _index_, _count_)
+### 24.4.12, Atomics.wake(_typedArray_, _index_, _count_)
 
 Modify this algorithm as follows:
 
@@ -256,7 +256,7 @@ In step 12.a., change the word _agent_ to the work _waiter_.
 waiters, which are (_agent_, false | Promise) pairs.)
 
 
-24.4.15, Atomics.asyncWait( _typedArray_, _index_, _value_, _timeout_ )
+### 24.4.15, Atomics.asyncWait( _typedArray_, _index_, _value_, _timeout_ )
 
 Spec note: A new section.  This is substantially similar to Atomics.wait.
 
