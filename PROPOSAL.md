@@ -248,12 +248,16 @@ Replace Steps 16-19 with the following:
 
 ### 24.4.12, Atomics.wake(_typedArray_, _index_, _count_)
 
-Modify this algorithm as follows:
+RemoveWaiters no longer returns a list of pairs, but a list of waiters, which are (_agent_, false | Promise) pairs, so modify step 12 of this algorithm as follows:
 
-In step 12.a., change the word _agent_ to the work _waiter_.
+1. Repeat, while _S_ is not an empty List,
+   1. Let _W_ be the first waiter in _S_.
+   1. Remove _W_ from the front of _S_.
+   1. Assert: _W_ is a pair (_A_, _p_)
+   1. Perform WakeWaiter(_WL_, _A_, _p_).
+   1. Add 1 to n.
 
-(RemoveWaiters no longer returns a list of pairs, but a list of
-waiters, which are (_agent_, false | Promise) pairs.)
+Also note the subtle change of the word _agent_ to the work _waiter_ in substep a.
 
 
 ### 24.4.15, Atomics.asyncWait( _typedArray_, _index_, _value_, _timeout_ )
