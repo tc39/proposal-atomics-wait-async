@@ -148,12 +148,12 @@ The abstract operation AddWaiter takes three arguments, a WaiterList
 _WL_, an agent signifier _W_, and _promise_, which is either false or
 a Promise object. It performs the following steps:
 
-* Assert: The calling agent is in the critical section for _WL_.
-* Assert: (_W_, _promise_) is not on the list of waiters in any WaiterList.
-* If _promise_ is false:
-** Insert (_W_, false) into the list of waiters in _WL_ before any other entry (_W_, _x_) in the list.
-* Else,
-** Add (_W_, _promise_) to the end of the list of waiters in _WL_.
+1. Assert: The calling agent is in the critical section for _WL_.
+1. Assert: (_W_, _promise_) is not on the list of waiters in any WaiterList.
+1. If _promise_ is false:
+ 1. Insert (_W_, false) into the list of waiters in _WL_ before any other entry (_W_, _x_) in the list.
+1. Else,
+ 1. Add (_W_, _promise_) to the end of the list of waiters in _WL_.
 
 
 24.4.1.7, RemoveWaiter( _WL_, _W_, _promise_ )
@@ -162,9 +162,9 @@ The abstract operation RemoveWaiter takes three arguments, a
 WaiterList _WL_, an agent signifier _W_, and _promise_, which is
 either false or a Promise object. It performs the following steps:
 
-* Assert: The calling agent is in the critical section for _WL_.
-* Assert: (_W_, _promise_) is on the list of waiters in _WL_.
-* Remove (_W_, _promise_) from the list of waiters in _WL_. 
+1. Assert: The calling agent is in the critical section for _WL_.
+1. Assert: (_W_, _promise_) is on the list of waiters in _WL_.
+1. Remove (_W_, _promise_) from the list of waiters in _WL_. 
 
 
 24.4.1.9, Suspend( _WL_, _W_)
@@ -174,12 +174,7 @@ now handled in the caller.  (Not intended as a semantic change.)
 
 Change step 5 to be this:
 
-* Perform LeaveCriticalSection(WL) and suspend W, performing the
-  combined operation in such a way that a wakeup that arrives after
-  the critical section is exited but before the suspension takes
-  effect is not lost. W can wake up only because it was woken
-  explicitly by another agent calling WakeWaiter(WL, W), not for any
-  other reasons at all.
+1. Perform LeaveCriticalSection(WL) and suspend W, performing the combined operation in such a way that a wakeup that arrives after the critical section is exited but before the suspension takes effect is not lost. W can wake up only because it was woken explicitly by another agent calling WakeWaiter(WL, W), not for any other reasons at all.
 
 Remove steps 7 and 8.
 
@@ -190,12 +185,12 @@ The abstract operation WakeWaiter takes three arguments, a WaiterList
 _WL_, an agent signifier _W_, and _promise_, which is either false or
 a Promise object. It performs the following steps:
 
-* Assert: The calling agent is in the critical section for _WL_.
-* Assert: (_W_, _promise_) is on the list of waiters in _WL_.
-* If _promise_ is false:
-** Wake the agent _W_. 
-* Else,
-** Make _promise_ resolveable.  (Spec details TBD.)
+1. Assert: The calling agent is in the critical section for _WL_.
+1. Assert: (_W_, _promise_) is on the list of waiters in _WL_.
+1. If _promise_ is false:
+ 1. Wake the agent _W_. 
+1. Else,
+ 1. Make _promise_ resolveable.  (Spec details TBD.)
 
 
 24.4.1.13, AddAlarm(_WL_, _alarmFn_, _timeout_)
@@ -206,17 +201,17 @@ AddAlarm takes three arguments, a WaiterList _WL_, a thunk _alarmFn_,
 and a nonnegative finite number _timeout_.  It performs the following
 steps:
 
-* Assert: the current thread is in the critical section on _WL_.
-* Let _alarm_ be a truthy value that is not in _WL_'s alarm set.
-* Add _alarm_ to _WL_'s alarm set.
-* After _timeout_ milliseconds has passed, perform the following actions on a concurrent thread:
-** Perform EnterCriticalSection(_WL_).
-** If _alarm_ is in _WL_'s alarm set:
-*** Remove _alarm_ from _WL_'s alarm set.
-*** Perform _alarmFn_().
-** Perform LeaveCriticalSection(_WL_).
-** Note: _alarmFn_ is now dead.
-* Return _alarm_.
+1. Assert: the current thread is in the critical section on _WL_.
+1. Let _alarm_ be a truthy value that is not in _WL_'s alarm set.
+1. Add _alarm_ to _WL_'s alarm set.
+1. After _timeout_ milliseconds has passed, perform the following actions on a concurrent thread:
+ 1. Perform EnterCriticalSection(_WL_).
+ 1. If _alarm_ is in _WL_'s alarm set:
+  1. Remove _alarm_ from _WL_'s alarm set.
+  1. Perform _alarmFn_().
+ 1. Perform LeaveCriticalSection(_WL_).
+ 1. Note: _alarmFn_ is now dead.
+1. Return _alarm_.
 
 
 24.4.1.4, CancelAlarm(_WL_, _alarm_)
@@ -226,29 +221,29 @@ Spec note: A new section.
 CancelAlarm takes two arguments, a WaiterList _WL_ and an alarm ID
 _alarm_.  It performs the following steps:
 
-* Assert: the current thread is in the critical section on _WL_
-* Assert: _alarm_ is not false.
-* Remove _alarm_ from _WL_'s alarm set (it may not be present).
-* Note: the thunk associated with _alarm_ is now dead.
+1. Assert: the current thread is in the critical section on _WL_
+1. Assert: _alarm_ is not false.
+1. Remove _alarm_ from _WL_'s alarm set (it may not be present).
+1. Note: the thunk associated with _alarm_ is now dead.
 
 
 24.4.11, Atomics.wait(_typedArray_, _index_, _value_, _timeout_)
 
 Replace Steps 16-19 with the following:
 
-* Perform AddWaiter(_WL_, _W_, false).
-* Let _awoken_ be true.
-* Let _alarm_ be false.
-* If _q_ is finite then:
-** Let _alarmFn_ be a function of no arguments that does the following:
-*** Set _awoken_ to false.
-*** Perform RemoveWaiter(_WL_, _W_, false)
-*** Perform WakeWaiter(_WL_, _W_, false).
-** Set _alarm_ to AddAlarm(_WL_, _alarmFn_, _q_).
-* Perform Suspend(_WL_, _W_)
-* If _awoken_ is true and _alarm_ is not false:
-** Perform CancelAlarm(_WL_, _alarm_)
-* Assert: (_W_, false) is not on the list of waiters in WL.
+1. Perform AddWaiter(_WL_, _W_, false).
+1. Let _awoken_ be true.
+1. Let _alarm_ be false.
+1. If _q_ is finite then:
+ 1. Let _alarmFn_ be a function of no arguments that does the following:
+  1. Set _awoken_ to false.
+  1. Perform RemoveWaiter(_WL_, _W_, false)
+  1. Perform WakeWaiter(_WL_, _W_, false).
+ 1. Set _alarm_ to AddAlarm(_WL_, _alarmFn_, _q_).
+1. Perform Suspend(_WL_, _W_)
+1. If _awoken_ is true and _alarm_ is not false:
+ 1. Perform CancelAlarm(_WL_, _alarm_)
+1. Assert: (_W_, false) is not on the list of waiters in WL.
 
 
 24.4.12, Atomics.wake(_typedArray_, _index_, _count_)
@@ -265,40 +260,40 @@ waiters, which are (_agent_, false | Promise) pairs.)
 
 Spec note: A new section.  This is substantially similar to Atomics.wait.
 
-* Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_, true).
-* Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
-* Let _v_ be ? ToInt32(_value_).
-* Let _q_ be ? ToNumber(_timeout_).
-* If _q_ is NaN, let _t_ be + infinity, else let _t_ be max(_q_, 0).
-* Let _block_ be _buffer_.[[ArrayBufferData]].
-* Let _offset_ be _typedArray_.[[ByteOffset]].
-* Let _indexedPosition_ be (_i_ × 4) + _offset_.
-* Let _WL_ be GetWaiterList(_block_, _indexedPosition_).
-* Perform EnterCriticalSection(_WL_).
-* Let _w_ be ! AtomicLoad(_typedArray_, _i_).
-* If _v_ is not equal to _w_, then
-** Perform LeaveCriticalSection(_WL_).
-** Return a new Promise resolved with the String "not-equal" (as for Promise.resolve)
-* Let _W_ be AgentSignifier().
-* Let _awoken_ be true.
-* Let _alarm_ be false.
-* Let _executor_ be a function of two arguments, _resolve_ and _reject_, that does the following:
-** If _awoken_ is true then
-*** If _alarm_ is not false:
-**** Perform CancelAlarm(_WL_, _alarm_)
-*** Invoke _resolve_ on the string "ok"
-** else
-*** Invoke _resolve_ on the string "timed-out"
-* Let _P_ be a new Promise created with the executor _executor_
-* If _q_ is finite:
-** Let _alarmFn_ be a function of no arguments that does the following:
-*** Set _awoken_ to true.
-*** Perform RemoveWaiter(_WL_, _W_, _P_)
-*** Perform WakeWaiter(_WL_, _W_, _P_)
-** Set _alarm_ to AddAlarm(_WL_, _alarmFn_, _q_)
-* Perform AddWaiter(_WL_, _W_, _P_)
-* Perform LeaveCriticalSection(_WL_).
-* Return _P_.
+1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_, true).
+1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
+1. Let _v_ be ? ToInt32(_value_).
+1. Let _q_ be ? ToNumber(_timeout_).
+1. If _q_ is NaN, let _t_ be + infinity, else let _t_ be max(_q_, 0).
+1. Let _block_ be _buffer_.[[ArrayBufferData]].
+1. Let _offset_ be _typedArray_.[[ByteOffset]].
+1. Let _indexedPosition_ be (_i_ × 4) + _offset_.
+1. Let _WL_ be GetWaiterList(_block_, _indexedPosition_).
+1. Perform EnterCriticalSection(_WL_).
+1. Let _w_ be ! AtomicLoad(_typedArray_, _i_).
+1. If _v_ is not equal to _w_, then
+ 1. Perform LeaveCriticalSection(_WL_).
+ 1. Return a new Promise resolved with the String "not-equal" (as for Promise.resolve)
+1. Let _W_ be AgentSignifier().
+1. Let _awoken_ be true.
+1. Let _alarm_ be false.
+1. Let _executor_ be a function of two arguments, _resolve_ and _reject_, that does the following:
+ 1. If _awoken_ is true then
+  1. If _alarm_ is not false:
+   1. Perform CancelAlarm(_WL_, _alarm_)
+  1. Invoke _resolve_ on the string "ok"
+ 1. else
+  1. Invoke _resolve_ on the string "timed-out"
+1. Let _P_ be a new Promise created with the executor _executor_
+1. If _q_ is finite:
+ 1. Let _alarmFn_ be a function of no arguments that does the following:
+  1. Set _awoken_ to true.
+  1. Perform RemoveWaiter(_WL_, _W_, _P_)
+  1. Perform WakeWaiter(_WL_, _W_, _P_)
+ 1. Set _alarm_ to AddAlarm(_WL_, _alarmFn_, _q_)
+1. Perform AddWaiter(_WL_, _W_, _P_)
+1. Perform LeaveCriticalSection(_WL_).
+1. Return _P_.
 
 
 ## Polyfills
