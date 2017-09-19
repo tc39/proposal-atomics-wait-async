@@ -151,9 +151,9 @@ a Promise object. It performs the following steps:
 1. Assert: The calling agent is in the critical section for _WL_.
 1. Assert: (_W_, _promise_) is not on the list of waiters in any WaiterList.
 1. If _promise_ is false:
- 1. Insert (_W_, false) into the list of waiters in _WL_ before any other entry (_W_, _x_) in the list.
+  1. Insert (_W_, false) into the list of waiters in _WL_ before any other entry (_W_, _x_) in the list.
 1. Else,
- 1. Add (_W_, _promise_) to the end of the list of waiters in _WL_.
+  1. Add (_W_, _promise_) to the end of the list of waiters in _WL_.
 
 
 24.4.1.7, RemoveWaiter( _WL_, _W_, _promise_ )
@@ -188,9 +188,9 @@ a Promise object. It performs the following steps:
 1. Assert: The calling agent is in the critical section for _WL_.
 1. Assert: (_W_, _promise_) is on the list of waiters in _WL_.
 1. If _promise_ is false:
- 1. Wake the agent _W_. 
+  1. Wake the agent _W_. 
 1. Else,
- 1. Make _promise_ resolveable.  (Spec details TBD.)
+  1. Make _promise_ resolveable.  (Spec details TBD.)
 
 
 24.4.1.13, AddAlarm(_WL_, _alarmFn_, _timeout_)
@@ -205,12 +205,12 @@ steps:
 1. Let _alarm_ be a truthy value that is not in _WL_'s alarm set.
 1. Add _alarm_ to _WL_'s alarm set.
 1. After _timeout_ milliseconds has passed, perform the following actions on a concurrent thread:
- 1. Perform EnterCriticalSection(_WL_).
- 1. If _alarm_ is in _WL_'s alarm set:
-  1. Remove _alarm_ from _WL_'s alarm set.
-  1. Perform _alarmFn_().
- 1. Perform LeaveCriticalSection(_WL_).
- 1. Note: _alarmFn_ is now dead.
+  1. Perform EnterCriticalSection(_WL_).
+  1. If _alarm_ is in _WL_'s alarm set:
+    1. Remove _alarm_ from _WL_'s alarm set.
+    1. Perform _alarmFn_().
+  1. Perform LeaveCriticalSection(_WL_).
+  1. Note: _alarmFn_ is now dead.
 1. Return _alarm_.
 
 
@@ -235,14 +235,14 @@ Replace Steps 16-19 with the following:
 1. Let _awoken_ be true.
 1. Let _alarm_ be false.
 1. If _q_ is finite then:
- 1. Let _alarmFn_ be a function of no arguments that does the following:
-  1. Set _awoken_ to false.
-  1. Perform RemoveWaiter(_WL_, _W_, false)
-  1. Perform WakeWaiter(_WL_, _W_, false).
- 1. Set _alarm_ to AddAlarm(_WL_, _alarmFn_, _q_).
+  1. Let _alarmFn_ be a function of no arguments that does the following:
+    1. Set _awoken_ to false.
+    1. Perform RemoveWaiter(_WL_, _W_, false)
+    1. Perform WakeWaiter(_WL_, _W_, false).
+  1. Set _alarm_ to AddAlarm(_WL_, _alarmFn_, _q_).
 1. Perform Suspend(_WL_, _W_)
 1. If _awoken_ is true and _alarm_ is not false:
- 1. Perform CancelAlarm(_WL_, _alarm_)
+  1. Perform CancelAlarm(_WL_, _alarm_)
 1. Assert: (_W_, false) is not on the list of waiters in WL.
 
 
@@ -272,25 +272,25 @@ Spec note: A new section.  This is substantially similar to Atomics.wait.
 1. Perform EnterCriticalSection(_WL_).
 1. Let _w_ be ! AtomicLoad(_typedArray_, _i_).
 1. If _v_ is not equal to _w_, then
- 1. Perform LeaveCriticalSection(_WL_).
- 1. Return a new Promise resolved with the String "not-equal" (as for Promise.resolve)
+  1. Perform LeaveCriticalSection(_WL_).
+  1. Return a new Promise resolved with the String "not-equal" (as for Promise.resolve)
 1. Let _W_ be AgentSignifier().
 1. Let _awoken_ be true.
 1. Let _alarm_ be false.
 1. Let _executor_ be a function of two arguments, _resolve_ and _reject_, that does the following:
- 1. If _awoken_ is true then
-  1. If _alarm_ is not false:
-   1. Perform CancelAlarm(_WL_, _alarm_)
-  1. Invoke _resolve_ on the string "ok"
- 1. else
-  1. Invoke _resolve_ on the string "timed-out"
+  1. If _awoken_ is true then
+    1. If _alarm_ is not false:
+      1. Perform CancelAlarm(_WL_, _alarm_)
+    1. Invoke _resolve_ on the string "ok"
+  1. else
+    1. Invoke _resolve_ on the string "timed-out"
 1. Let _P_ be a new Promise created with the executor _executor_
 1. If _q_ is finite:
- 1. Let _alarmFn_ be a function of no arguments that does the following:
-  1. Set _awoken_ to true.
-  1. Perform RemoveWaiter(_WL_, _W_, _P_)
-  1. Perform WakeWaiter(_WL_, _W_, _P_)
- 1. Set _alarm_ to AddAlarm(_WL_, _alarmFn_, _q_)
+  1. Let _alarmFn_ be a function of no arguments that does the following:
+    1. Set _awoken_ to true.
+    1. Perform RemoveWaiter(_WL_, _W_, _P_)
+    1. Perform WakeWaiter(_WL_, _W_, _P_)
+  1. Set _alarm_ to AddAlarm(_WL_, _alarmFn_, _q_)
 1. Perform AddWaiter(_WL_, _W_, _P_)
 1. Perform LeaveCriticalSection(_WL_).
 1. Return _P_.
