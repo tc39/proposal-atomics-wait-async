@@ -88,7 +88,7 @@ agents are woken in a predictable order.
 ## Semantics
 
 Several changes to the existing spec are necessary to accomodate
-`Atomics.asyncWait`.  These changes are not in themselves intended to
+`Atomics.waitAsync`.  These changes are not in themselves intended to
 change semantics.
 
 Primarily, timeouts are made less magical by introducing a notion of
@@ -103,7 +103,7 @@ Secondarily, the job of removing a waiter has been moved to the thread
 performing a wakeup, whether that is another agent performing a `wake`
 or the concurrent alarm thread.
 
-With that background, the changes necessary to add `asyncWait` boil
+With that background, the changes necessary to add `waitAsync` boil
 down to generalizing the WaiterList to hold both sync and async
 waiters, and to inserting waiters into that list by priority.
 
@@ -118,7 +118,7 @@ Before the first paragraph, insert this paragraph:
 the agent signifier of the agent that is waiting.  Agents that are
 waiting in `Atomics.wait` will be designated by a waiter where the
 second element of the pair is false; agents that are waiting in
-`Atomics.asyncWait` will be designated by a waiter where the second
+`Atomics.waitAsync` will be designated by a waiter where the second
 element of the pair is the promise that is to be resolved when the
 agent is awoken."
 
@@ -155,7 +155,7 @@ a Promise object. It performs the following steps:
 1. Else,
    1. Add (_W_, _promise_) to the end of the list of waiters in _WL_.
 
-Spec note: The purpose of prioritizing sync waits is to avoid surprises in a corner case: Suppose an agent _A_ asyncWaits and then sync waits on the same location, and another agent _B_ performs a wakeup on that location with a count of 1.  If waits are inserted strictly in order nothing will happen, because it's _A_'s asyncWait that will end, while _A_'s sync wait keeps _A_ sleeping; it is only when _A_ is woken again that the sync wait ends, _A_ runs to completion, and the promise for the asyncWait can be resolved.  With the prioritization _A_ will run more quickly, which seems most reasonable.
+Spec note: The purpose of prioritizing sync waits is to avoid surprises in a corner case: Suppose an agent _A_ async-waits and then sync waits on the same location, and another agent _B_ performs a wakeup on that location with a count of 1.  If waits are inserted strictly in order nothing will happen, because it's _A_'s async-wait that will end, while _A_'s sync wait keeps _A_ sleeping; it is only when _A_ is woken again that the sync wait ends, _A_ runs to completion, and the promise for the async-wait can be resolved.  With the prioritization _A_ will run more quickly, which seems most reasonable.
 
 ### 24.4.1.7, RemoveWaiter( _WL_, _W_, _promise_ )
 
@@ -261,7 +261,7 @@ RemoveWaiters no longer returns a list of pairs, but a list of waiters, which ar
 Also note the subtle change of the word _agent_ to the work _waiter_ in substep a.
 
 
-### 24.4.15, Atomics.asyncWait( _typedArray_, _index_, _value_, _timeout_ )
+### 24.4.15, Atomics.waitAsync( _typedArray_, _index_, _value_, _timeout_ )
 
 Spec note: A new section.  This is substantially similar to Atomics.wait.
 
@@ -316,7 +316,7 @@ This polyfill models every situation, except for the
 situation where an agent performs a `waitAsync` followed by a `wait`
 and another agent subsequently asks to wake just one waiter - in
 the real semantics, the `wait` is woken first, in the polyfill the
-`asyncWait` is woken first.
+`waitAsync` is woken first.
 
 As suggested by the semantics, in the Web domain it uses a helper
 Worker that performs a synchronous `wait` on behalf of the agent that
