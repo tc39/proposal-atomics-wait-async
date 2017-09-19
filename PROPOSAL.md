@@ -151,10 +151,11 @@ a Promise object. It performs the following steps:
 1. Assert: The calling agent is in the critical section for _WL_.
 1. Assert: (_W_, _promise_) is not on the list of waiters in any WaiterList.
 1. If _promise_ is false:
-   1. Insert (_W_, false) into the list of waiters in _WL_ before any other entry (_W_, _x_) in the list.
+   1. Insert (_W_, false) into the list of waiters in _WL_ directly before the first other entry (_W_, _x_) in the list, or to the end of the list if there is no such entry.
 1. Else,
    1. Add (_W_, _promise_) to the end of the list of waiters in _WL_.
 
+Spec note: The purpose of prioritizing sync waits is to avoid surprises in a corner case: Suppose an agent _A_ asyncWaits and then sync waits on the same location, and another agent _B_ performs a wakeup on that location with a count of 1.  If waits are inserted strictly in order nothing will happen, because it's _A_'s asyncWait that will end, while _A_'s sync wait keeps _A_ sleeping; it is only when _A_ is woken again that the sync wait ends, _A_ runs to completion, and the promise for the asyncWait can be resolved.  With the prioritization _A_ will run more quickly, which seems most reasonable.
 
 ### 24.4.1.7, RemoveWaiter( _WL_, _W_, _promise_ )
 
