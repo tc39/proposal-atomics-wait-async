@@ -224,7 +224,7 @@ _alarm_.  It performs the following steps:
 1. Assert: the current thread is in the critical section on _WL_
 1. Assert: _alarm_ is not false.
 1. Remove _alarm_ from _WL_'s alarm set (it may not be present).
-1. Note: the thunk associated with _alarm_ is now dead.
+1. Note: No alarm that subsequently triggers for _alarm_ (in the concurrent thread referenced in AddAlarm) will have any effect.  The thunk associated with _alarm_ is now dead and can be reclaimed; any scheduled timeout associated with _alarm_ can be canceled.
 
 
 ### 24.4.11, Atomics.wait(_typedArray_, _index_, _value_, _timeout_)
