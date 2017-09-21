@@ -57,7 +57,7 @@ need to know how that waiter is waiting, whether with `wait` or with
 
 Multiple agents can `waitAsync` on the same location at the same time.
 A `wake` on the location will resolve all the waiters' promises (as
-many as the count argument allows for).
+many as the `count` argument to `wake` allows for).
 
 A single agent can `waitAsync` multiple times on a single location
 before any of the waits are resolved.  A `wake` on the location will
@@ -81,21 +81,24 @@ is not viable.
 
 Agents that wait with `waitAsync` participate in the same fairness
 scheme as agents that wait with `wait`: When an agent performs a
-`wake` with a count s.t. it does not wake all waiting agents, waiting
-agents are woken in a predictable order.
+`wake` with a `count` s.t. it does not wake all waiting agents,
+waiting agents are woken in a predictable order.  This order is the
+order in which agents called `wait` or `waitAsync`, except when an
+agent calls `wait` after `waitAsync` (on the same location) when it is
+more complicated; see below.
 
 
 ## Semantics
 
-Several changes to the existing spec are necessary to accomodate
+Several changes to the ES2017 spec are necessary to accomodate
 `Atomics.waitAsync`.  These changes are not in themselves intended to
 change semantics.
 
 Primarily, timeouts are made less magical by introducing a notion of
 concurrent "alarms" which are thunks that are run in response to
-expired timeouts and perform wakeups using the standard mechanisms.
-Alarms are named by IDs and sets of these IDs hang off the
-WaiterLists.  The sets are in some sense optional, but clarify the
+expired timeouts and perform wakeups using the standard wakeup
+mechanisms.  Alarms are named by IDs and sets of these IDs hang off
+the WaiterLists.  The sets are in some sense optional, but clarify the
 coordination between alarms and explict wakeups as well as the
 lifetime of the alarm thunks.
 
@@ -105,7 +108,8 @@ or the concurrent alarm thread.
 
 With that background, the changes necessary to add `waitAsync` boil
 down to generalizing the WaiterList to hold both sync and async
-waiters, and to inserting waiters into that list by priority.
+waiters, and to inserting waiters into that list in an order that
+ensures the desired wakeup order.
 
 
 ### 24.4.1.3, GetWaiterList
@@ -116,13 +120,13 @@ Before the first paragraph, insert this paragraph:
 
 "A _Waiter_ is a pair (_agent_, null | _promise_) where _agent_ is
 the agent signifier of the agent that is waiting.  Agents that are
-waiting in `Atomics.wait` will be designated by a waiter where the
+waiting in `Atomics.wait` will be designated by a Waiter where the
 second element of the pair is null; agents that are waiting in
-`Atomics.waitAsync` will be designated by a waiter where the second
+`Atomics.waitAsync` will be designated by a Waiter where the second
 element of the pair is the promise that is to be resolved when the
 agent is awoken."
 
-In the current first paragraph, change the word "agent" to "waiter".
+In the current first paragraph, change the word "agent" to "Waiter".
 
 After the current first paragraph, insert these two paragraphs:
 
@@ -137,7 +141,7 @@ critical section for the _WaiterList_."
 In the current third paragraph, add "adding and removing alarms" to
 the list of guarded operations.
 
-Spec note: The alarm may perhaps be further formalized so that the
+Spec note: The alarm system may perhaps be further formalized so that the
 clause about the possibly absent alarm ID is not needed in the spec of
 CancelAlarm, but I'm not sure this would actually clarify anything.
 
@@ -223,7 +227,7 @@ CancelAlarm takes two arguments, a WaiterList _WL_ and an alarm ID
 _alarm_.  It performs the following steps:
 
 1. Assert: the current thread is in the critical section on _WL_
-1. Assert: _alarm_ is not false.
+1. Assert: _alarm_ is a truthy value.
 1. Remove _alarm_ from _WL_'s alarm set (it may not be present).
 1. Note: No alarm that subsequently triggers for _alarm_ (in the concurrent thread referenced in AddAlarm) will have any effect.  The thunk associated with _alarm_ is now dead and can be reclaimed; any scheduled timeout associated with _alarm_ can be canceled.
 
