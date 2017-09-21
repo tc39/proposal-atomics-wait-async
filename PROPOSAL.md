@@ -114,10 +114,10 @@ Change this section as follows.
 
 Before the first paragraph, insert this paragraph:
 
-"A _Waiter_ is a pair (_agent_, false | _promise_) where _agent_ is
+"A _Waiter_ is a pair (_agent_, null | _promise_) where _agent_ is
 the agent signifier of the agent that is waiting.  Agents that are
 waiting in `Atomics.wait` will be designated by a waiter where the
-second element of the pair is false; agents that are waiting in
+second element of the pair is null; agents that are waiting in
 `Atomics.waitAsync` will be designated by a waiter where the second
 element of the pair is the promise that is to be resolved when the
 agent is awoken."
@@ -127,7 +127,7 @@ In the current first paragraph, change the word "agent" to "waiter".
 After the current first paragraph, insert these two paragraphs:
 
 "There can be multiple entries in a _WaiterList_ with the same agent
-signifier, but at most one of those will have false in the second
+signifier, but at most one of those will have null in the second
 element of the entry."
 
 "The _WaiterList_ has an attached _alarm set_, a set of truthy values.
@@ -145,13 +145,13 @@ CancelAlarm, but I'm not sure this would actually clarify anything.
 ### 24.4.1.6, AddWaiter( _WL_, _W_, _promise_ )
 
 The abstract operation AddWaiter takes three arguments, a WaiterList
-_WL_, an agent signifier _W_, and _promise_, which is either false or
+_WL_, an agent signifier _W_, and _promise_, which is either null or
 a Promise object. It performs the following steps:
 
 1. Assert: The calling agent is in the critical section for _WL_.
 1. Assert: (_W_, _promise_) is not on the list of waiters in any WaiterList.
-1. If _promise_ is false:
-   1. Insert (_W_, false) into the list of waiters in _WL_ directly before the first other entry (_W_, _x_) in the list, or to the end of the list if there is no such entry.
+1. If _promise_ is null:
+   1. Insert (_W_, null) into the list of waiters in _WL_ directly before the first other entry (_W_, _x_) in the list, or to the end of the list if there is no such entry.
 1. Else,
    1. Add (_W_, _promise_) to the end of the list of waiters in _WL_.
 
@@ -161,7 +161,7 @@ Spec note: The purpose of prioritizing sync waits is to avoid surprises in a cor
 
 The abstract operation RemoveWaiter takes three arguments, a
 WaiterList _WL_, an agent signifier _W_, and _promise_, which is
-either false or a Promise object. It performs the following steps:
+either null or a Promise object. It performs the following steps:
 
 1. Assert: The calling agent is in the critical section for _WL_.
 1. Assert: (_W_, _promise_) is on the list of waiters in _WL_.
@@ -183,12 +183,12 @@ Remove steps 7 and 8.
 ### 24.4.1.10, WakeWaiter( _WL_, _W_, _promise_ )
 
 The abstract operation WakeWaiter takes three arguments, a WaiterList
-_WL_, an agent signifier _W_, and _promise_, which is either false or
+_WL_, an agent signifier _W_, and _promise_, which is either null or
 a Promise object. It performs the following steps:
 
 1. Assert: The calling agent is in the critical section for _WL_.
 1. Assert: (_W_, _promise_) is on the list of waiters in _WL_.
-1. If _promise_ is false:
+1. If _promise_ is null:
    1. Wake the agent _W_. 
 1. Else,
    1. Make _promise_ resolveable.  (Spec details TBD.)
@@ -232,24 +232,24 @@ _alarm_.  It performs the following steps:
 
 Replace Steps 16-19 with the following:
 
-1. Perform AddWaiter(_WL_, _W_, false).
+1. Perform AddWaiter(_WL_, _W_, null).
 1. Let _awoken_ be true.
 1. Let _alarm_ be false.
 1. If _q_ is finite then:
    1. Let _alarmFn_ be a function of no arguments that does the following:
       1. Set _awoken_ to false.
-      1. Perform RemoveWaiter(_WL_, _W_, false)
-      1. Perform WakeWaiter(_WL_, _W_, false).
+      1. Perform RemoveWaiter(_WL_, _W_, null)
+      1. Perform WakeWaiter(_WL_, _W_, null).
    1. Set _alarm_ to AddAlarm(_WL_, _alarmFn_, _q_).
 1. Perform Suspend(_WL_, _W_)
 1. If _awoken_ is true and _alarm_ is not false:
    1. Perform CancelAlarm(_WL_, _alarm_)
-1. Assert: (_W_, false) is not on the list of waiters in WL.
+1. Assert: (_W_, null) is not on the list of waiters in WL.
 
 
 ### 24.4.12, Atomics.wake(_typedArray_, _index_, _count_)
 
-RemoveWaiters no longer returns a list of pairs, but a list of waiters, which are (_agent_, false | Promise) pairs, so modify step 12 of this algorithm as follows:
+RemoveWaiters no longer returns a list of pairs, but a list of waiters, which are (_agent_, null | Promise) pairs, so modify step 12 of this algorithm as follows:
 
 1. Repeat, while _S_ is not an empty List,
    1. Let _W_ be the first waiter in _S_.
