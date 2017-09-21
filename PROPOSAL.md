@@ -292,7 +292,7 @@ Spec note: A new section.  This is substantially similar to Atomics.wait.
 1. Let _P_ be a new Promise created with the executor _executor_
 1. If _q_ is finite:
    1. Let _alarmFn_ be a function of no arguments that does the following:
-      1. Set _awoken_ to true.
+      1. Set _awoken_ to false.
       1. Perform RemoveWaiter(_WL_, _W_, _P_)
       1. Perform WakeWaiter(_WL_, _W_, _P_)
    1. Set _alarm_ to AddAlarm(_WL_, _alarmFn_, _q_)
