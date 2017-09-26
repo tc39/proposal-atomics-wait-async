@@ -1,4 +1,4 @@
-# Atomics.waitAsync (Stage 1 proposal)
+# Atomics.waitAsync (Stage 2 proposal)
 
 Author: Lars T Hansen (lhansen@mozilla.com), April 2017
 
