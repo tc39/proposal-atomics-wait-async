@@ -1,0 +1,350 @@
+<!doctype html>
+<meta charset="utf8">
+<script src="ecmarkup.js"></script>
+<link rel="stylesheet" href="ecmarkup.css">
+<title>Atomics.waitAsync</title>
+<pre class=metadata>
+  status: proposal
+  contributors: Lars Hansen, Shu-yu Guo, Ecma International
+</pre>
+<emu-intro id="intro">
+  <h1>Atomics.waitAsync</h1>
+  <p>We provide a new API, `Atomics.waitAsync`, that an agent can use to wait on a shared memory location (to later be awoken by some agent calling Atomics.wake on that location) without waiting synchronously (ie, without blocking). Notably this API is useful in agents whose [[CanBlock]] attribute is false, such as the main thread of a web browser document, but the API is not restricted to such agents.</p>
+  <p>The API is promise-based. Very high performance is not a requirement, but good performance is desirable.</p>
+</emu-intro>
+
+<emu-clause id="sec-semantics">
+  <h1>Semantics</h1>
+  <p>To support `Atomics.waitAsync`, the WaiterList semantic object is split into two semantic objects.</p>
+  <p>A <dfn>ClusterWaiterList</dfn> is a semantic object that contains an ordered List of agent signifiers of agents that are waiting on a location (_block_, _i_) in shared memory; _block_ is a Shared Data Block and _i_ a byte offset into the memory of _block_. This list is agent-independent and, like the current WaiterList semantic object, is shared by all agents in an agent cluster.</p>
+  <p>An <dfn>AgentWaitList</dfn> is List of Records (that have a PromiseCapability Record and an alarm id) or *null*. Each Record encapsulates the result of a call to `Atomics.waitAsync`, and *null* denotes a call to `Atomics.wait`. This list is per-agent.</p>
+  <p>Conceptually, agents that call either `Atomics.wait` or `Atomics.waitAsync` are appended to ClusterWaiterList. If the call was to `Atomics.wait`, *null* is prepended to that agent's AgentWaitList. If the call was to `Atomics.waitAsync`, the result PromiseCapability Record is appended to that agent's AgentWaitList.</p>
+  <p>This enable two design goals:</p>
+  <ol>
+    <li>Waiting agents are notified in FIFO order for fairness.</li>
+    <li>Asynchronous waits in one agent are notified in FIFO order, while synchronous waits are notified before any asynchronous wait. This is because resolving the Promise result of a call to `Atomics.waitAsync` does no meaningful computation if the agent is in a blocking wait.</li>
+  </ol>
+
+  <p>Agent Record is modified as follows.</p>
+  <emu-table caption="Agent Record Fields">
+    <table>
+      <tbody>
+        <tr>
+          <th>Field Name</th>
+          <th>Value</th>
+          <th>Meaning</th>
+        </tr>
+        <tr>
+          <td>[[LittleEndian]]</td>
+          <td>Boolean</td>
+          <td>The default value computed for the <em>isLittleEndian</em> parameter when it is needed by the algorithms GetValueFromBuffer and SetValueInBuffer. The choice is implementation-dependent and should be the alternative that is most efficient for the implementation.  Once the value has been observed it cannot change.</td>
+        </tr>
+        <tr>
+          <td>[[CanBlock]]</td>
+          <td>Boolean</td>
+          <td>Determines whether the agent can block or not.</td>
+        </tr>
+        <tr>
+          <td>[[Signifier]]</td>
+          <td>Any globally-unique value</td>
+          <td>Uniquely identifies the agent within its agent cluster.</td>
+        </tr>
+        <tr>
+          <td>[[IsLockFree1]]</td>
+          <td>Boolean</td>
+          <td>*true* if atomic operations on one-byte values are lock-free, *false* otherwise.</td>
+        </tr>
+        <tr>
+          <td>[[IsLockFree2]]</td>
+          <td>Boolean</td>
+          <td>*true* if atomic operations on two-byte values are lock-free, *false* otherwise.</td>
+        </tr>
+        <tr>
+          <td>[[CandidateExecution]]</td>
+          <td>A candidate execution Record</td>
+          <td>See the memory model.</td>
+        </tr>
+      </tbody>
+      <tr>
+        <td><ins>[[WaitList]]</ins></td>
+        <td><ins>An List</ins></td>
+        <td><ins>An List of Records or *null* denoting calls to `Atomics.waitAsync` and `Atomics.wait`, respectively.</ins></td> 
+    </table>
+  </emu-table>
+
+  <emu-clause id="sec-clusterwaiterlist">
+    <h1>Get<ins>Cluster</ins>WaiterList ( _block_, _i_ )</h1>
+    <p>A <dfn><ins>Cluster</ins>WaiterList</dfn> is a semantic object that contains an ordered list of agent signifiers of those agents that are waiting on a location (_block_, _i_) in shared memory; _block_ is a Shared Data Block and _i_ a byte offset into the memory of _block_.</p>
+    <p><ins>There can be multiple entries in a ClusterWaiterList with the same agent signifier.</ins></p>
+    <p><ins>The ClusterWaiterList has an attached <dfn>alarm set</dfn>, a set of truthy values. This set is manipulated only when the agent manipulating it is in the critical section for the ClusterWaiterList.</p>
+    <p>The agent cluster has a store of <ins>Cluster</ins>WaiterList objects; the store is indexed by (_block_, _i_). WaiterLists are agent-independent: a lookup in the store of <ins>Cluster</ins>WaiterLists by (_block_, _i_) will result in the same <ins>Cluster</ins>WaiterList object in any agent in the agent cluster.</p>
+    <p>Operations on a <ins>Cluster</ins>WaiterList -- adding and removing waiting agents, traversing the list of agents, suspending and notifying agents on the list, adding and removing alarms -- may only be performed by agents that have entered the <ins>Cluster</ins>WaiterList's critical section.</p>
+    <p>The abstract operation Get<ins>Cluster</ins>WaiterList takes two arguments, a Shared Data Block _block_ and a nonnegative integer _i_. It performs the following steps:</p>
+    <emu-alg>
+      1. Assert: _block_ is a Shared Data Block.
+      1. Assert: _i_ and _i_ + 3 are valid byte offsets within the memory of _block_.
+      1. Assert: _i_ is divisible by 4.
+      1. Return the <ins>Cluster</ins>WaiterList that is referenced by the pair (_block_, _i_).
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-alarm-functions">
+    <h1>Alarm Functions</h1>
+    <p><ins>This is a new section.</ins></p>
+    <p>An alarm function is an anonymous built-in function that has [[WaiterList]], [[Waiter]], [[AsyncRecord]], and [[SyncResult]] internal slots.</p>
+    <p>When an alarm function is called with no arguments, the following steps are taken:</p>
+    <emu-alg>
+      1. Let _F_ be the active function object.
+      1. Assert: _F_ has a [[WaiterList]] internal slot whose value is a ClusterWaiterList.
+      1. Assert: _F_ has a [[Waiter]] internal slot whose value is an agent signifier.
+      1. Assert: _F_ has a [[AsyncRecord]] internal slot whose value is either a PromiseCapability Record or *null*.
+      1. If _F_.[[SyncResult]] is not *null*, then
+        1. Set _F_.[[SyncResult]].[[Result]] to the String `"timed-out"`.
+        1. NOTE: [[SyncResult]] is used by `Atomics.wait` to communicate the result of the blocking wait.
+      1. Perform RemoveWaiter(_WL_, _W_, _F_.[[AsyncRecord]]).
+      1. Perform NotifyWaiter(_WL_, _W_, _F_.[[AsyncRecord]], `"timed-out"`).
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-addwaiter" aoid="AddWaiter">
+    <h1>AddWaiter ( _WL_, _W_<ins>, _asyncRecord_</ins> )</h1>
+    <p>The abstract operation AddWaiter takes three arguments, a <ins>Cluster</ins>WaiterList _WL_ <del>and</del><ins>,</ins> an agent signifier _W_, <ins>and a Record _asyncRecord_</ins>. It performs the following steps:</p>
+    <emu-alg>
+      1. Assert: The calling agent is in the critical section for _WL_.
+      1. <ins>Let _AR_ be the Agent Record whose [[Signifier]] field is _W_.</ins>
+      1. Assert: <del>_W_ is not on the list of waiters in any WaiterList.</del><ins>_asyncRecord_ is not in _AR_.[[WaitList]].</ins>
+      1. Add _W_ to the end of the list of waiters in _WL_.
+      1. <ins>If _asyncRecord_ is *null*, then</ins>
+        1. <ins>Insert _asyncRecord_ to the beginning of _AR_.[[WaitList]].</ins>
+      1. <ins>Else,</ins>
+        1. <ins>Insert _asyncRecord_ to the end of _AR_.[[WaitList]].</ins>
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-removewaiter" aoid="RemoveWaiter">
+    <h1>RemoveWaiter ( _WL_, _W_<ins>, _asyncRecord_</ins> )</h1>
+    <p>The abstract operation RemoveWaiter takes three arguments, a <ins>Cluster</ins>WaiterList _WL_ <del>and</del><ins>,</ins> an agent signifier _W_, <ins>and a Record _asyncRecord_</ins>. It performs the following steps:</p>
+    <emu-alg>
+      1. Assert: The calling agent is in the critical section for _WL_.
+      1. <ins>Let _AR_ be the Agent Record whose [[Signifier]] field is _W_.</ins>
+      1. Assert: _W_ is on the list of waiters in _WL_.
+      1. <ins>Assert: _asyncRecord_ is in _AR_.[[WaitList]].</ins>
+      1. Remove _W_ from the list of waiters in _WL_.
+      1. <ins>Remove _asyncRecord_ from _AR_.[[WaitList]].</ins>
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-removewaiters" aoid="RemoveWaiters">
+    <h1>RemoveWaiters ( _WL_, _c_ )</h1>
+    <p>The abstract operation RemoveWaiters takes two arguments, a <ins>Cluster</ins>WaiterList _WL_ and nonnegative integer _c_. It performs the following steps:</p>
+    <emu-alg>
+      1. Assert: The calling agent is in the critical section for _WL_.
+      1. Let _L_ be a new empty List.
+      1. Let _S_ be a reference to the list of waiters in _WL_.
+      1. Repeat, while _c_ &gt; 0 and _S_ is not an empty List,
+        1. Let _W_ be the first waiter in _S_.
+        1. <ins>Let _AR_ be the Agent Record whose [[Signifier]] field is _W_.</ins>
+        1. <ins>Let _asyncRecord_ be the first element in _AR_.[[WaitList]].</ins>
+        1. Add <del>_W_</del><ins>a new Record { [[Signifier]]: _W_, [[AsyncRecord]]: _asyncRecord_ }</ins> to the end of _L_.
+        1. Remove _W_ from _S_.
+        1. Subtract 1 from _c_.
+      1. Return _L_.
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-suspend" aoid="Suspend">
+    <p>Change this function not to take a _timeout_ argument. Timeouts are now handled in the caller. (Not intended as a normative change.)</p>
+    <h1>Suspend ( _WL_, _W_<del>, _timeout_</del> )</h1>
+    <p>The abstract operation Suspend takes <del>three</del><ins>two</ins> arguments, a <ins>Cluster</ins>WaiterList _WL_<del>,</del><ins>and</ins> an agent signifier _W_<del>, and a nonnegative, non-*NaN* Number _timeout_</del>. It performs the following steps:</p>
+    <emu-alg>
+      1. Assert: The calling agent is in the critical section for _WL_.
+      1. Assert: _W_ is equal to AgentSignifier().
+      1. Assert: _W_ is on the list of waiters in _WL_.
+      1. Assert: AgentCanSuspend() is *true*.
+      1. Perform LeaveCriticalSection(_WL_) and suspend _W_ for up to _timeout_ milliseconds, performing the combined operation in such a way that a notification that arrives after the critical section is exited but before the suspension takes effect is not lost.  _W_ can <del>notify either because the timeout expired or because it was</del><ins>be</ins> notified explicitly by another agent calling NotifyWaiter(_WL_, _W_, ...), and not for any other reasons at all.
+      1. Perform EnterCriticalSection(_WL_).
+      1. <del>If _W_ was notified explicitly by another agent calling NotifyWaiter(_WL_, _W_), return *true*.</del>
+      1. <del>Return *false*.</del>
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-notifywaiter" aoid="NotifyWaiter">
+    <h1>NotifyWaiter ( _WL_, _W_<ins>, _asyncRecord_, _value_</ins> )</h1>
+    <p>The abstract operation NotifyWaiter takes <del>two</del><ins>three</ins> arguments, a <ins>Cluster</ins>WaiterList _WL_ <del>and<del><ins>,</ins> an agent signifier _W_<ins>, and a PromiseCapability Record _capability_</ins>. It performs the following steps:</p>
+    <emu-alg>
+      1. Assert: The calling agent is in the critical section for _WL_.
+      1. Assert: _W_ is on the list of waiters in _WL_.
+      1. Assert: _value_ is either the String `"ok"` or the String `"timed-out"`.
+      1. <ins>Let _AR_ be the Agent Record whose [[Signifier]] field is _W_.</ins>
+      1. <ins>Assert: _asyncRecord_ is in _AR_.[[WaitList]].</ins>
+      1. Let _execution_ be the [[CandidateExecution]] field of the surrounding agent's Agent Record.
+      1. Let _eventsRecord_ be the Agent Events Record in _execution_.[[EventsRecords]] whose [[AgentSignifier]] is AgentSignifier().
+      1. Let _agentSynchronizesWith_ be _eventsRecord_.[[AgentSynchronizesWith]].
+      1. Let _notifierEventList_ be _eventsRecord_.[[EventList]].
+      1. Let _waiterEventList_ be the [[EventList]] field of the element in _execution_.[[EventsRecords]] whose [[AgentSignifier]] is _W_.
+      1. Let _notifyEvent_ and _waitEvent_ be new Synchronize events.
+      1. Append _notifyEvent_ to _notifierEventList_.
+      1. Append _waitEvent_ to _waiterEventList_.
+      1. Append (_notifyEvent_, _waitEvent_) to _agentSynchronizesWith_.
+      1. <del>Notify the agent _W_.</del><ins>If _asyncRecord_.[[PromiseCapability]] is *null*, then</ins>
+        1. <ins>Notify the agent _W_.</ins>
+      1. <ins>Else,</ins>
+        1. <ins>Perform ! Call(_asyncRecord_.[[PromiseCapability]].[[Resolve]], *undefined*, &laquo; _value_ &raquo;)</ins>
+      1. <ins>If _asyncRecord_.[[Alarm]] is truthy, then</ins>
+        1. <ins>Perform CancelAlarm(_WL_, _asyncRecord_.[[Alarm]]).</ins>
+    </emu-alg>
+    <emu-note>
+      <p>The embedding may delay notifying _W_, e.g. for resource management reasons, but _W_ must eventually be notified in order to guarantee forward progress.</p>
+    </emu-note>
+  </emu-clause>
+
+  <emu-clause id="sec-addalarm" aoid="AddAlarm">
+    <h1>AddAlarm( _WL_, _alarmFn_, _timeout_ )</h1>
+    <p><ins>This is a new abstract operation.</ins></p>
+    <p>The abstract operation AddAlarm takes three arguments, a ClusterWaiterList _WL_, a thunk _alarmFn_, and a nonnegative finite number _timeout_. It performs the following steps:</p>
+    <emu-alg>
+      1. Assert: The calling agent is in the critical section for _WL_.
+      1. Let _alarm_ be a truthy value that is not in _WL_'s alarm set.
+      1. Add _alarm_ to _WL_'s alarm set.
+      1. After _timeout_ milliseconds has passed, perform the following actions concurrently:
+        1. Perform EnterCriticalSection(_WL_).
+        1. If _alarm_ is in _WL_'s alarm set, then
+          1. Remove _alarm_ from _WL_'s alarm set.
+          1. Perform ! Call(_alarmFn_, *undefined*, &laquo; &raquo;).
+        1. Perform LeaveCriticalSection(_WL_).
+        1. NOTE: _alarmFn_ is now dead.
+      1. Return _alarm_.
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-cancelalarm" aoid="CancelAlarm">
+    <h1>CancelAlarm( _WL_, _alarm_ )</h1>
+    <p><ins>This is a new abstraction operation.</ins></p>
+    <p>The abstract operation CancelAlarm takes two arguments, a ClusterWaiterList _WL_, and a truthy value _alarm_. It performs the following steps:</p>
+    <emu-alg>
+      1. Assert: The calling agent is in the critical section for _WL_.
+      1. Assert: _alarm_ is a truthy value.
+      1. If _alarm_ is in _WL_'s alarm set, then
+        1. Remove _alarm_ from _WL_'s alarm set.
+      1. NOTE: No alarm that subsequently triggers for alarm (in the concurrent thread referenced in AddAlarm) will have any effect. The thunk associated with alarm is now dead and can be reclaimed; any scheduled timeout associated with alarm can be canceled.
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-atomics.wait">
+    <h1>Atomics.wait ( _typedArray_, _index_, _value_, _timeout_ )</h1>
+    <p>`Atomics.wait` puts the calling agent in a wait queue and puts it to sleep until it is notified or the sleep times out. The following steps are taken:</p>
+    <emu-alg>
+      1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_, *true*).
+      1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
+      1. Let _v_ be ? ToInt32(_value_).
+      1. Let _q_ be ? ToNumber(_timeout_).
+      1. If _q_ is *NaN*, let _t_ be *+&infin;*, else let _t_ be max(_q_, 0).
+      1. Let _B_ be AgentCanSuspend().
+      1. If _B_ is *false*, throw a *TypeError* exception.
+      1. Let _block_ be _buffer_.[[ArrayBufferData]].
+      1. Let _offset_ be _typedArray_.[[ByteOffset]].
+      1. Let _indexedPosition_ be (_i_ &times; 4) + _offset_.
+      1. Let _WL_ be Get<ins>Cluster</ins>WaiterList(_block_, _indexedPosition_).
+      1. Perform EnterCriticalSection(_WL_).
+      1. Let _w_ be ! AtomicLoad(_typedArray_, _i_).
+      1. If _v_ is not equal to _w_, then
+        1. Perform LeaveCriticalSection(_WL_).
+        1. Return the String `"not-equal"`.
+      1. Let _W_ be AgentSignifier().
+      1. <del>Perform AddWaiter(_WL_, _W_).</del>
+      1. <del>Let _notified_ be Suspend(_WL_, _W_, _t_).</del>
+      1. <del>If _notified_ is *true*, then</del>
+        1. <del>Assert: _W_ is not on the list of waiters in _WL_.</del>
+      1. <del>Else,</del>
+        1. <del>Perform RemoveWaiter(_WL_, _W_).</del>
+      1. <ins>Let _syncResult_ be a new Record { [[Result]]: `"ok"` }.</ins>
+      1. <ins>Let _alarm_ be *false*.</ins>
+      1. <ins>If _t_ is finite, then</ins>
+        1. <ins>Let _stepsAlarm_ be the algorithm steps defined in Alarm Functions (<emu-xref href="#sec-alarm-functions"></emu-xref>).</ins>
+        1. <ins>Let _alarmFn_ be CreateBuiltinFunction(_stepsAlarm, &laquo; [[WaiterList]], [[Waiter]], [[AsyncRecord]], [[SyncResult]] &raquo;).</ins>
+        1. <ins>Set _alarmFn_.[[WaiterList]] to _WL_.</ins>
+        1. <ins>Set _alarmFn_.[[Waiter]] to _W_.</ins>
+        1. <ins>Set _alarmFn_.[[AsyncRecord]] to *null*.</ins>
+        1. <ins>Set _alarmFn_.[[SyncResult]] to _syncResult_.</ins>
+        1. <ins>Set _alarm_ to AddAlarm(_WL_, _alarmFn_, _t_).</ins>
+      1. <ins>Perform AddWaiter(_WL_, _W_, *null).</ins>
+      1. <ins>Perform Suspend(_WL_, _W_).</ins>
+      1. <ins>If _syncResult_.[[Result]] is `"ok"`, then</ins>
+        1. <ins>Perform CancelAlarm(_WL_, _alarm_).</ins>
+      1. Assert: The [[WaitList]] field of _W_'s Agent Record does not contain *null*.
+      1. Perform LeaveCriticalSection(_WL_).
+      1. <del>If _notified_ is *true*, return the String `"ok"`.</del>
+      1. Return <del>the String `"timed-out"`</del><ins>_syncResult_.[[Result]]</ ns>.
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="atomics.waitasync">
+    <h1>Atomics.waitAsync ( _typedArray_, _index_, _value_, _timeout_ )</h1>
+    <p><ins>This is a new method.</ins></p>
+    <p>`Atomics.waitAsync` returns a Promise that is resolved when the calling agent is notified or the sleep times out. The following steps are taken:</p>
+    <emu-alg>
+      1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_, *true*).
+      1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
+      1. Let _v_ be ? ToInt32(_value_).
+      1. Let _q_ be ? ToNumber(_timeout_).
+      1. If _q_ is *NaN*, let _t_ be *+&infin;*, else let _t_ be max(_q_, 0).
+      1. Let _B_ be AgentCanSuspend().
+      1. If _B_ is *false*, throw a *TypeError* exception.
+      1. Let _block_ be _buffer_.[[ArrayBufferData]].
+      1. Let _offset_ be _typedArray_.[[ByteOffset]].
+      1. Let _indexedPosition_ be (_i_ &times; 4) + _offset_.
+      1. Let _WL_ be Get<ins>Cluster</ins>WaiterList(_block_, _indexedPosition_).
+      1. Let _promiseCapability_ be ! NewPromiseCapability(%Promise%).
+      1. Perform EnterCriticalSection(_WL_).
+      1. Let _w_ be ! AtomicLoad(_typedArray_, _i_).
+      1. If _v_ is not equal to _w_, then
+        1. Perform LeaveCriticalSection(_WL_).
+        1. Perform ! Call(_capability_.[[Resolve]], *undefined*, &laquo; `"not-equal"` &raquo;).
+        1. Return _promiseCapability_.[[Promise]].
+      1. Let _W_ be AgentSignifier().
+      1. Let _alarm_ be *false*.
+      1. Let _asyncRecord_ be { [[PromiseCapability]]: _promiseCapability_, [[Alarm]]: _alarm_ }.
+      1. Let _t_ is finite, then
+        1. Let _stepsAlarm_ be the algorithm steps defined in Alarm Functions (<emu-xref href="#sec-alarm-functions"></emu-xref>).
+        1. Let _alarmFn_ be CreateBuiltinFunction(_stepsAlarm, &laquo; [[WaiterList]], [[Waiter]], [[AsyncRecord]], [[SyncResult]] &raquo;).
+        1. Set _alarmFn_.[[WaiterList]] to _WL_.
+        1. Set _alarmFn_.[[Waiter]] to _W_.
+        1. Set _alarmFn_.[[AsyncRecord]] to _asyncRecord_.
+        1. Set _alarmFn_.[[SyncResult]] to *null*.
+        1. Set _alarm_ to AddAlarm(_WL_, _alarmFn_, _t_).
+        1. Set _asyncRecord_.[[Alarm]] to _alarm_.
+      1. Perform AddWaiter(_WL_, _W_, _asyncRecord_).
+      1. Perform LeaveCriticalSection(_WL_).
+      1. Return _promiseCapability_.[[Promise]].
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-atomics.notify">
+    <h1>Atomics.notify ( _typedArray_, _index_, _count_ )</h1>
+    <p>`Atomics.notify` notifies some agents that are sleeping in the wait queue.  The following steps are taken:</p>
+    <emu-alg>
+      1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_, *true*).
+      1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
+      1. If _count_ is *undefined*, let _c_ be *+&infin;*.
+      1. Else,
+        1. Let _intCount_ be ? ToInteger(_count_).
+        1. Let _c_ be max(_intCount_, 0).
+      1. Let _block_ be _buffer_.[[ArrayBufferData]].
+      1. Let _offset_ be _typedArray_.[[ByteOffset]].
+      1. Let _indexedPosition_ be (_i_ &times; 4) + _offset_.
+      1. Let _WL_ be Get<ins>Cluster</ins>WaiterList(_block_, _indexedPosition_).
+      1. Let _n_ be 0.
+      1. Perform EnterCriticalSection(_WL_).
+      1. Let _S_ be RemoveWaiters(_WL_, _c_).
+      1. Repeat, while _S_ is not an empty List,
+        1. Let _W_ be the <del>first agent</del><ins>the [[Signifier]] field of the first element</ins> in _S_.</ins>
+        1. <ins>Let _asyncRecord_ be the [[AsyncRecord]] field of the first element of _S_.</ins>
+        1. Remove <del>_W_</del><ins>the first element</ins> from the front of _S_.</ins>
+        1. Perform NotifyWaiter(_WL_, _W_<ins>, _asyncRecord_, `"ok"`</ins>).
+        1. Add 1 to _n_.
+      1. Perform LeaveCriticalSection(_WL_).
+      1. Return _n_.
+    </emu-alg>
+  </emu-clause>
+
+</emu-clause>
