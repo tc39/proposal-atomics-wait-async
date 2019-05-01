@@ -67,8 +67,8 @@
       </tbody>
       <tr>
         <td><ins>[[WaitList]]</ins></td>
-        <td><ins>An List</ins></td>
-        <td><ins>An List of Records or *null* denoting calls to `Atomics.waitAsync` and `Atomics.wait`, respectively.</ins></td> 
+        <td><ins>A List</ins></td>
+        <td><ins>A List of Records or *null* denoting calls to `Atomics.waitAsync` and `Atomics.wait`, respectively.</ins></td> 
     </table>
   </emu-table>
 
@@ -97,7 +97,7 @@
       1. Let _F_ be the active function object.
       1. Assert: _F_ has a [[WaiterList]] internal slot whose value is a ClusterWaiterList.
       1. Assert: _F_ has a [[Waiter]] internal slot whose value is an agent signifier.
-      1. Assert: _F_ has a [[AsyncRecord]] internal slot whose value is either a PromiseCapability Record or *null*.
+      1. Assert: _F_ has a [[AsyncRecord]] internal slot whose value is either a Record or *null*.
       1. If _F_.[[SyncResult]] is not *null*, then
         1. Set _F_.[[SyncResult]].[[Result]] to the String `"timed-out"`.
         1. NOTE: [[SyncResult]] is used by `Atomics.wait` to communicate the result of the blocking wait.
@@ -170,7 +170,7 @@
 
   <emu-clause id="sec-notifywaiter" aoid="NotifyWaiter">
     <h1>NotifyWaiter ( _WL_, _W_<ins>, _asyncRecord_, _value_</ins> )</h1>
-    <p>The abstract operation NotifyWaiter takes <del>two</del><ins>three</ins> arguments, a <ins>Cluster</ins>WaiterList _WL_ <del>and<del><ins>,</ins> an agent signifier _W_<ins>, and a PromiseCapability Record _capability_</ins>. It performs the following steps:</p>
+    <p>The abstract operation NotifyWaiter takes <del>two</del><ins>three</ins> arguments, a <ins>Cluster</ins>WaiterList _WL_ <del>and<del><ins>,</ins> an agent signifier _W_<ins>, and a Record _asyncRecord_</ins>. It performs the following steps:</p>
     <emu-alg>
       1. Assert: The calling agent is in the critical section for _WL_.
       1. Assert: _W_ is on the list of waiters in _WL_.
@@ -186,12 +186,12 @@
       1. Append _notifyEvent_ to _notifierEventList_.
       1. Append _waitEvent_ to _waiterEventList_.
       1. Append (_notifyEvent_, _waitEvent_) to _agentSynchronizesWith_.
-      1. <del>Notify the agent _W_.</del><ins>If _asyncRecord_.[[PromiseCapability]] is *null*, then</ins>
+      1. <del>Notify the agent _W_.</del><ins>If _asyncRecord_ is *null*, then</ins>
         1. <ins>Notify the agent _W_.</ins>
       1. <ins>Else,</ins>
         1. <ins>Perform ! Call(_asyncRecord_.[[PromiseCapability]].[[Resolve]], *undefined*, &laquo; _value_ &raquo;)</ins>
-      1. <ins>If _asyncRecord_.[[Alarm]] is truthy, then</ins>
-        1. <ins>Perform CancelAlarm(_WL_, _asyncRecord_.[[Alarm]]).</ins>
+        1. <ins>If _asyncRecord_.[[Alarm]] is truthy, then</ins>
+          1. <ins>Perform CancelAlarm(_WL_, _asyncRecord_.[[Alarm]]).</ins>
     </emu-alg>
     <emu-note>
       <p>The embedding may delay notifying _W_, e.g. for resource management reasons, but _W_ must eventually be notified in order to guarantee forward progress.</p>
