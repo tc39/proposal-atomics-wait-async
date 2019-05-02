@@ -68,9 +68,15 @@
       <tr>
         <td><ins>[[WaitList]]</ins></td>
         <td><ins>A List</ins></td>
-        <td><ins>A List of Records or *null* denoting calls to `Atomics.waitAsync` and `Atomics.wait`, respectively.</ins></td> 
+        <td><ins>A List of Records or *null* denoting calls to `Atomics.waitAsync` and `Atomics.wait`, respectively.</ins></td>
     </table>
   </emu-table>
+
+  <emu-clause id="sec-hostresolveinagent" aoid="HostResolveInAgent">
+    <h1>HostResolveInAgent ( _W_, _promiseCapability_, _resolution_)</h1>
+    <p><ins>This is a new section.</ins></p>
+    <p>HostResolveInAgent is an implementation-defined abstract operation that takes three arguments, an agent signifier _W_, a PromiseCapability Record _promiseCapability_, and a value _resolution_. The host's responsibility is to resolve the _promiseCapability_ in the agent signified by _W_ with _resolution_ in finite time. The host may delay resolving the _promiseCapability_ in _W_, e.g. for resource management reasons, but the promise must eventually be resolved.</p>
+  </emu-clause>
 
   <emu-clause id="sec-clusterwaiterlist">
     <h1>Get<ins>Cluster</ins>WaiterList ( _block_, _i_ )</h1>
@@ -189,7 +195,8 @@
       1. <del>Notify the agent _W_.</del><ins>If _asyncRecord_ is *null*, then</ins>
         1. <ins>Notify the agent _W_.</ins>
       1. <ins>Else,</ins>
-        1. <ins>Perform ! Call(_asyncRecord_.[[PromiseCapability]].[[Resolve]], *undefined*, &laquo; _value_ &raquo;)</ins>
+        1. <ins>Perform HostResolveInAgent(_W_, _asyncRecord_.[[PromiseCapability]], _value_)</ins>
+        1. <ins>NOTE: Another agent's promise cannot be assumed to be synchronously resolvable.</ins>
         1. <ins>If _asyncRecord_.[[Alarm]] is truthy, then</ins>
           1. <ins>Perform CancelAlarm(_WL_, _asyncRecord_.[[Alarm]]).</ins>
     </emu-alg>
@@ -267,7 +274,7 @@
         1. <ins>Set _alarmFn_.[[AsyncRecord]] to *null*.</ins>
         1. <ins>Set _alarmFn_.[[SyncResult]] to _syncResult_.</ins>
         1. <ins>Set _alarm_ to AddAlarm(_WL_, _alarmFn_, _t_).</ins>
-      1. <ins>Perform AddWaiter(_WL_, _W_, *null).</ins>
+      1. <ins>Perform AddWaiter(_WL_, _W_, *null*).</ins>
       1. <ins>Perform Suspend(_WL_, _W_).</ins>
       1. <ins>If _syncResult_.[[Result]] is `"ok"`, then</ins>
         1. <ins>Perform CancelAlarm(_WL_, _alarm_).</ins>
