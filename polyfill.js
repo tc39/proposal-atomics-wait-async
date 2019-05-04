@@ -43,7 +43,7 @@
                 break;
               }
               default: {
-                throw new Error("Bogus message sent to wait helper: " + e);
+                throw new Error("Bogus message sent to wait helper: " + ev.data[0]);
               }
             }
         } catch (e) {
