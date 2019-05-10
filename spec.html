@@ -196,7 +196,7 @@
         1. <ins>Notify the agent _W_.</ins>
       1. <ins>Else,</ins>
         1. <ins>Perform HostResolveInAgent(_W_, _asyncRecord_.[[PromiseCapability]], _value_)</ins>
-        1. <ins>NOTE: Another agent's promise cannot be assumed to be synchronously resolvable.</ins>
+        1. <ins>NOTE: An agent must not access another agent's promise capability in any capacity beyond passing it to the host.</ins>
         1. <ins>If _asyncRecord_.[[Alarm]] is truthy, then</ins>
           1. <ins>Perform CancelAlarm(_WL_, _asyncRecord_.[[Alarm]]).</ins>
     </emu-alg>
