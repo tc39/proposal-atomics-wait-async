@@ -277,7 +277,7 @@
         1. <ins>Set _alarm_ to AddAlarm(_WL_, _alarmFn_, _t_).</ins>
       1. <ins>Perform AddWaiter(_WL_, _W_, *null*).</ins>
       1. <ins>Perform Suspend(_WL_, _W_).</ins>
-      1. <ins>If _syncResult_.[[Result]] is `"ok"`, then</ins>
+      1. <ins>If _syncResult_.[[Result]] is `"ok"` and _alarm_ is not *false*, then</ins>
         1. <ins>Perform CancelAlarm(_WL_, _alarm_).</ins>
       1. Assert: The [[WaitList]] field of _W_'s Agent Record does not contain *null*.
       1. Perform LeaveCriticalSection(_WL_).
