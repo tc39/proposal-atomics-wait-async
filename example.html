@@ -31,7 +31,7 @@
       ia = new Int32Array(ev.data);
     }
     postMessage("Aux worker is sleeping for a little bit");
-    setTimeout(function () { postMessage("Aux worker is waking"); Atomics.wake(ia, 37); }, 1000);
+    setTimeout(function () { postMessage("Aux worker is waking"); Atomics.notify(ia, 37); }, 1000);
   }`;
 
   function test2() {
