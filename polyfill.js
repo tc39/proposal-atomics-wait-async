@@ -14,7 +14,7 @@
  * Agents that don't call Atomics.waitAsync need do nothing special.
  *
  * Any kind of agent can wake another agent that is sleeping in
- * Atomics.waitAsync by just calling Atomics.wake for the location being slept
+ * Atomics.waitAsync by just calling Atomics.notify for the location being slept
  * on, as normal.
  *
  * The implementation is not completely faithful to the proposed semantics: in
