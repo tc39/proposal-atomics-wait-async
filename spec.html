@@ -9,7 +9,7 @@
 </pre>
 <emu-intro id="intro">
   <h1>Atomics.waitAsync</h1>
-  <p>We provide a new API, `Atomics.waitAsync`, that an agent can use to wait on a shared memory location (to later be awoken by some agent calling Atomics.wake on that location) without waiting synchronously (ie, without blocking). Notably this API is useful in agents whose [[CanBlock]] attribute is false, such as the main thread of a web browser document, but the API is not restricted to such agents.</p>
+  <p>We provide a new API, `Atomics.waitAsync`, that an agent can use to wait on a shared memory location (to later be awoken by some agent calling Atomics.notify on that location) without waiting synchronously (ie, without blocking). Notably this API is useful in agents whose [[CanBlock]] attribute is false, such as the main thread of a web browser document, but the API is not restricted to such agents.</p>
   <p>The API is promise-based. Very high performance is not a requirement, but good performance is desirable.</p>
 </emu-intro>
 
@@ -17,9 +17,9 @@
   <h1>Semantics</h1>
   <p>To support `Atomics.waitAsync`, the WaiterList semantic object is split into two semantic objects.</p>
   <p>A <dfn>ClusterWaiterList</dfn> is a semantic object that contains an ordered List of agent signifiers of agents that are waiting on a location (_block_, _i_) in shared memory; _block_ is a Shared Data Block and _i_ a byte offset into the memory of _block_. This list is agent-independent and, like the current WaiterList semantic object, is shared by all agents in an agent cluster.</p>
-  <p>An <dfn>AgentWaitList</dfn> is List of Records (that have a PromiseCapability Record and an alarm id) or *null*. Each Record encapsulates the result of a call to `Atomics.waitAsync`, and *null* denotes a call to `Atomics.wait`. This list is per-agent.</p>
+  <p>An <dfn>AgentWaitList</dfn> is a List of Records (that have a PromiseCapability Record and an alarm id) or *null*. Each Record encapsulates the result of a call to `Atomics.waitAsync`, and *null* denotes a call to `Atomics.wait`. This list is per-agent.</p>
   <p>Conceptually, agents that call either `Atomics.wait` or `Atomics.waitAsync` are appended to ClusterWaiterList. If the call was to `Atomics.wait`, *null* is prepended to that agent's AgentWaitList. If the call was to `Atomics.waitAsync`, the result PromiseCapability Record is appended to that agent's AgentWaitList.</p>
-  <p>This enable two design goals:</p>
+  <p>This enables two design goals:</p>
   <ol>
     <li>Waiting agents are notified in FIFO order for fairness.</li>
     <li>Asynchronous waits in one agent are notified in FIFO order, while synchronous waits are notified before any asynchronous wait. This is because resolving the Promise result of a call to `Atomics.waitAsync` does no meaningful computation if the agent is in a blocking wait.</li>
@@ -176,11 +176,12 @@
 
   <emu-clause id="sec-notifywaiter" aoid="NotifyWaiter">
     <h1>NotifyWaiter ( _WL_, _W_<ins>, _asyncRecord_, _value_</ins> )</h1>
-    <p>The abstract operation NotifyWaiter takes <del>two</del><ins>three</ins> arguments, a <ins>Cluster</ins>WaiterList _WL_ <del>and<del><ins>,</ins> an agent signifier _W_<ins>, and a Record _asyncRecord_</ins>. It performs the following steps:</p>
+    <p>The abstract operation NotifyWaiter takes <del>two</del><ins>four</ins> arguments,
+      a <ins>Cluster</ins>WaiterList _WL_ <del>and</del><ins>,</ins> an agent signifier _W_<ins>, a Record _asyncRecord_, and a String _value_</ins>. It performs the following steps:</p>
     <emu-alg>
       1. Assert: The calling agent is in the critical section for _WL_.
       1. Assert: _W_ is on the list of waiters in _WL_.
-      1. Assert: _value_ is either the String `"ok"` or the String `"timed-out"`.
+      1. <ins>Assert: _value_ is either the String `"ok"` or the String `"timed-out"`.</ins>
       1. <ins>Let _AR_ be the Agent Record whose [[Signifier]] field is _W_.</ins>
       1. <ins>Assert: _asyncRecord_ is in _AR_.[[WaitList]].</ins>
       1. Let _execution_ be the [[CandidateExecution]] field of the surrounding agent's Agent Record.
