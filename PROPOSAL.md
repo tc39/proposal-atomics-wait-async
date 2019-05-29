@@ -6,7 +6,7 @@ Author: Lars T Hansen (lhansen@mozilla.com), April 2017
 
 We provide a new API, `Atomics.waitAsync`, that an agent can use to
 wait on a shared memory location (to later be awoken by some agent
-calling `Atomics.wake` on that location) without waiting synchronously
+calling `Atomics.notify` on that location) without waiting synchronously
 (ie, without blocking).  Notably this API is useful in agents whose
 `[[CanBlock]]` attribute is `false`, such as the main thread of a web
 browser document, but the API is not restricted to such agents.
@@ -46,7 +46,7 @@ value, one of `"ok"`, `"timed-out"`, `"not-equal"`; the value has the same
 meaning as for the return type of `Atomics.wait`.  The promise is
 never rejected.
 
-Agents can call `Atomics.wake` on some location corresponding to
+Agents can call `Atomics.notify` on some location corresponding to
 `i32a[index]` to wake any agent waiting with
 `Atomics.waitAsync`.  The agent performing the wake does not
 need to know how that waiter is waiting, whether with `wait` or with
@@ -56,27 +56,27 @@ need to know how that waiter is waiting, whether with `wait` or with
 ## Notable facts (informal semantics)
 
 Multiple agents can `waitAsync` on the same location at the same time.
-A `wake` on the location will resolve all the waiters' promises (as
-many as the `count` argument to `wake` allows for).
+A `notify` on the location will resolve all the waiters' promises (as
+many as the `count` argument to `notify` allows for).
 
 A single agent can `waitAsync` multiple times on a single location
-before any of the waits are resolved.  A `wake` on the location will
+before any of the waits are resolved.  A `notify` on the location will
 resolve (sequentially) all the promises (as many as the count argument
 allows for).
 
 Some agents can `wait` and other agents can `waitAsync` on the same
-location at the same time, and a `wake` will wake waiters regardless
+location at the same time, and a `notify` will wake waiters regardless
 of how they are waiting.
 
 A single agent can first `waitAsync` on a location and then, before
 that wait is resolved, `wait` on the same location.
 
-A single agent can `waitAsync` on a location and can then `wake` on
+A single agent can `waitAsync` on a location and can then `notify` on
 that location to resolve that promise within itself.
 
 More generally, an agent can `waitAsync` on a location and only
 subsequent to that take action that will cause some agent to perform a
-`wake`.  For this reason, an implementation of `waitAsync` that blocks
+`notify`.  For this reason, an implementation of `waitAsync` that blocks
 is not viable.
 
 There are two fairness schemes: inter-agent and intra-agent. Among different
@@ -135,7 +135,7 @@ It would seem that multiple implementation strategies are possible,
 from having a thread per async wait (as the polyfill has) to
 having no additional threads at all, instead dispatching runnables to
 existing event loops in response to wakeups when records for
-async waits are found in the wait/wake data structures (a likely
+async waits are found in the wait/notify data structures (a likely
 strategy for Firefox, for example).
 
 
