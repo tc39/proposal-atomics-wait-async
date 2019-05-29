@@ -243,7 +243,7 @@
       1. <ins>Let _alarm_ be *false*.</ins>
       1. <ins>If _t_ is finite, then</ins>
         1. <ins>Let _stepsAlarm_ be the algorithm steps defined in Alarm Functions (<emu-xref href="#sec-alarm-functions"></emu-xref>).</ins>
-        1. <ins>Let _alarmFn_ be CreateBuiltinFunction(_stepsAlarm, &laquo; [[WaiterList]], [[Waiter]], [[Kind]], [[Result]] &raquo;).</ins>
+        1. <ins>Let _alarmFn_ be CreateBuiltinFunction(_stepsAlarm_, &laquo; [[WaiterList]], [[Waiter]], [[Kind]], [[Result]] &raquo;).</ins>
         1. <ins>Set _alarmFn_.[[WaiterList]] to _WL_.</ins>
         1. <ins>Set _alarmFn_.[[Waiter]] to _W_.</ins>
         1. <ins>Set _alarmFn_.[[Kind]] to the String `"sync"`.</ins>
@@ -288,7 +288,7 @@
       1. Let _asyncRecord_ be { [[PromiseCapability]]: _promiseCapability_, [[Alarm]]: _alarm_ }.
       1. Let _t_ is finite, then
         1. Let _stepsAlarm_ be the algorithm steps defined in Alarm Functions (<emu-xref href="#sec-alarm-functions"></emu-xref>).
-        1. Let _alarmFn_ be CreateBuiltinFunction(_stepsAlarm, &laquo; [[WaiterList]], [[Waiter]], [[Kind]], [[Result]] &raquo;).
+        1. Let _alarmFn_ be CreateBuiltinFunction(_stepsAlarm_, &laquo; [[WaiterList]], [[Waiter]], [[Kind]], [[Result]] &raquo;).
         1. Set _alarmFn_.[[WaiterList]] to _WL_.
         1. Set _alarmFn_.[[Waiter]] to _W_.
         1. Set _alarmFn_.[[Kind]] to the String `"async"`.
