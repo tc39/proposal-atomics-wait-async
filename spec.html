@@ -216,8 +216,7 @@
       1. Add _alarm_ to _WL_'s alarm set.
       1. After _timeout_ milliseconds has passed, perform the following actions concurrently:
         1. Perform EnterCriticalSection(_WL_).
-        1. If _alarm_ is in _WL_'s alarm set, then
-          1. Remove _alarm_ from _WL_'s alarm set.
+        1. If CancelAlarm(_WL_, _alarm_) is *true*, then
           1. Perform ! Call(_alarmFn_, *undefined*, &laquo; &raquo;).
         1. Perform LeaveCriticalSection(_WL_).
         1. NOTE: _alarmFn_ is now dead.
@@ -234,7 +233,9 @@
       1. Assert: _alarm_ is a truthy value.
       1. If _alarm_ is in _WL_'s alarm set, then
         1. Remove _alarm_ from _WL_'s alarm set.
-      1. NOTE: No alarm that subsequently triggers for alarm (in the concurrent thread referenced in AddAlarm) will have any effect. The thunk associated with alarm is now dead and can be reclaimed; any scheduled timeout associated with alarm can be canceled.
+        1. Return *true*.
+        1. NOTE: No alarm that subsequently triggers for _alarm_ (in the concurrent thread referenced in AddAlarm) will have any effect. If not called from AddAlarm, the thunk associated with _alarm_ is now dead and can be reclaimed; any scheduled timeout associated with alarm can be canceled.
+      1. Else return *false*.
     </emu-alg>
   </emu-clause>
 
@@ -277,7 +278,7 @@
         1. <ins>Set _alarm_ to AddAlarm(_WL_, _alarmFn_, _t_).</ins>
       1. <ins>Perform AddWaiter(_WL_, _W_, *null*).</ins>
       1. <ins>Perform Suspend(_WL_, _W_).</ins>
-      1. <ins>If _syncResult_.[[Result]] is `"ok"` and _alarm_ is not *false*, then</ins>
+      1. <ins>If _syncResult_.[[Result]] is `"ok"` and _alarm_ is a truthy value, then</ins>
         1. <ins>Perform CancelAlarm(_WL_, _alarm_).</ins>
       1. Assert: The [[WaitList]] field of _W_'s Agent Record does not contain *null*.
       1. Perform LeaveCriticalSection(_WL_).
