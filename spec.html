@@ -92,8 +92,8 @@
     <p>The abstract operation RemoveWaiter takes two arguments, a WaiterList _WL_ and <del>an agent signifier _W_</del><ins>a Record _waiterRecord_</ins>. It performs the following steps:</p>
     <emu-alg>
       1. Assert: The calling agent is in the critical section for _WL_.
-      1. Assert: <del>_W_</del><ins>_waiterRecord</ins> is on the list of waiters in _WL_.
-      1. Remove <del>_W_</del><ins>_waiterRecord</ins> from the list of waiters in _WL_.
+      1. Assert: <del>_W_</del><ins>_waiterRecord_</ins> is on the list of waiters in _WL_.
+      1. Remove <del>_W_</del><ins>_waiterRecord_</ins> from the list of waiters in _WL_.
     </emu-alg>
   </emu-clause>
 
