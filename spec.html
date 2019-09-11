@@ -28,11 +28,11 @@
 
   <emu-clause id="sec-getwaiterlist">
     <h1>GetWaiterList ( _block_, _i_ )</h1>
-    <p>A <dfn>WaiterList</dfn> is a semantic object that contains an ordered List of Records of the agent signifier, promise capability (possibly *undefined*), and an alarm of the agent that is waiting on a location (_block_, _i_) in shared memory; _block_ is a Shared Data Block and _i_ a byte offset into the memory of _block_. This list is agent-independent and, like the current WaiterList semantic object, is shared by all agents in an agent cluster.</p>
+    <p>A <dfn>WaiterList</dfn> is a semantic object that contains an ordered List of Records of the agent signifier, promise capability (possibly *undefined*), and an alarm of the agent that is waiting on a location (_block_, _i_) in shared memory; _block_ is a Shared Data Block and _i_ a byte offset into the memory of _block_. A WaiterList object also optionally contains a Synchronize event denoting the previous leaving of its critical section.</p>
     <p><ins>There can be multiple entries in a WaiterList with the same agent signifier.</ins></p>
     <p><ins>The WaiterList has an attached <dfn>alarm set</dfn>, a set of truthy values. This set is manipulated only when the agent manipulating it is in the critical section for the WaiterList.</p>
     <p>The agent cluster has a store of WaiterList objects; the store is indexed by (_block_, _i_). WaiterLists are agent-independent: a lookup in the store of WaiterLists by (_block_, _i_) will result in the same WaiterList object in any agent in the agent cluster.</p>
-    <p>Operations on a WaiterList -- adding and removing waiting agents, traversing the list of agents, suspending and notifying agents on the list, adding and removing alarms -- may only be performed by agents that have entered the WaiterList's critical section.</p>
+    <p>Operations on a WaiterList&mdash;adding and removing waiting agents, traversing the list of agents, suspending and notifying agents on the list, setting and retrieving the Synchronize event&mdash;may only be performed by agents that have entered the WaiterList's critical section.</p>
     <emu-note>
       <p>Conceptually, agents that call either `Atomics.wait` or `Atomics.waitAsync` are appended to WaiterList. If the call was to `Atomics.wait` in an agent A, a record with an *undefined* promise capability is inserted to be immediately preceding the first element whose agent signifier is A. If the call was to `Atomics.waitAsync`, the pair of the result PromiseCapability Record and A (_capability_, A) is appended.</p>
       <p>This enables two design goals:</p>
@@ -121,15 +121,6 @@
       1. Assert: The calling agent is in the critical section for _WL_.
       1. Assert: <del>_W_</del><ins>_waiterRecord_</ins> is on the list of waiters.
       1. <ins>Assert: _waiterRecord.[[Result]] is either the String `"ok"` or the String `"timed-out"`.</ins>
-      1. Let _execution_ be the [[CandidateExecution]] field of the surrounding agent's Agent Record.
-      1. Let _eventsRecord_ be the Agent Events Record in _execution_.[[EventsRecords]] whose [[AgentSignifier]] is AgentSignifier().
-      1. Let _agentSynchronizesWith_ be _eventsRecord_.[[AgentSynchronizesWith]].
-      1. Let _notifierEventList_ be _eventsRecord_.[[EventList]].
-      1. Let _waiterEventList_ be the [[EventList]] field of the element in _execution_.[[EventsRecords]] whose [[AgentSignifier]] is _W_.
-      1. Let _notifyEvent_ and _waitEvent_ be new Synchronize events.
-      1. Append _notifyEvent_ to _notifierEventList_.
-      1. Append _waitEvent_ to _waiterEventList_.
-      1. Append (_notifyEvent_, _waitEvent_) to _agentSynchronizesWith_.
       1. <del>Notify the agent _W_.</del>
       1. <ins>If _waiterRecord_.[[Alarm]] is truthy, then</ins>
         1. <ins>Perform CancelAlarm(_WL_, _waiterRecord_.[[Alarm]]).</ins>
