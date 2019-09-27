@@ -28,9 +28,9 @@
 
   <emu-clause id="sec-getwaiterlist">
     <h1>GetWaiterList ( _block_, _i_ )</h1>
-    <p>A <dfn>WaiterList</dfn> is a semantic object that contains an ordered List of Records of the agent signifier, promise capability (possibly *undefined*), and an alarm of the agent that is waiting on a location (_block_, _i_) in shared memory; _block_ is a Shared Data Block and _i_ a byte offset into the memory of _block_. A WaiterList object also optionally contains a Synchronize event denoting the previous leaving of its critical section.</p>
+    <p>A <dfn>WaiterList</dfn> is a semantic object that contains an ordered list of those agents that are waiting on a location (_block_, _i_) in shared memory; _block_ is a Shared Data Block and _i_ a byte offset into the memory of _block_.</p>
+    <p>A <dfn>WaiterList</dfn> is a semantic object that contains an ordered List <del>of those agents that are</del><ins>of Records of the agent signifier, promise capability (possibly *undefined*), and timeout of the agent that is</ins> waiting on a location (_block_, _i_) in shared memory; _block_ is a Shared Data Block and _i_ a byte offset into the memory of _block_. A WaiterList object also optionally contains a Synchronize event denoting the previous leaving of its critical section.</p>
     <p><ins>There can be multiple entries in a WaiterList with the same agent signifier.</ins></p>
-    <p><ins>The WaiterList has an attached <dfn>alarm set</dfn>, a set of truthy values. This set is manipulated only when the agent manipulating it is in the critical section for the WaiterList.</p>
     <p>The agent cluster has a store of WaiterList objects; the store is indexed by (_block_, _i_). WaiterLists are agent-independent: a lookup in the store of WaiterLists by (_block_, _i_) will result in the same WaiterList object in any agent in the agent cluster.</p>
     <p>Operations on a WaiterList&mdash;adding and removing waiting agents, traversing the list of agents, suspending and notifying agents on the list, setting and retrieving the Synchronize event&mdash;may only be performed by agents that have entered the WaiterList's critical section.</p>
     <emu-note>
@@ -50,21 +50,17 @@
     </emu-alg>
   </emu-clause>
 
-  <emu-clause id="sec-alarm-functions">
-    <h1>Alarm Functions</h1>
-    <p><ins>This is a new section.</ins></p>
-    <p>An alarm function is an anonymous built-in function that has [[WaiterList]], [[Waiter]], [[Kind]], and [[Result]] internal slots.</p>
-    <p>When an alarm function is called with no arguments, the following steps are taken:</p>
+  <emu-clause id="sec-triggertimeout" aoid="TriggerTimeout">
+    <h1>TriggerTimeout( _WL_, _waiterRecord_ )</h1>
+    <p><ins>This is a new abstract operation.</ins></p>
+    <p>The abstract operation TriggerTimeout takes two arguments, a WaiterList _WL_ and a Record _waiterRecord_. It performs the following steps:</p>
     <emu-alg>
-      1. Let _F_ be the active function object.
-      1. Assert: _F_ has a [[WaiterList]] internal slot whose value is a WaiterList.
-      1. Assert: _F_ has a [[WaiterRecord]] internal slot whose value is a Record.
-      1. Let _WL_ be _F_.[[WaiterList]].
-      1. Let _waiterRecord_ be _F_.[[WaiterRecord]].
-      1. Set _waiterRecord_.[[Result]] to `"timed-out"`.
+      1. Assert: _waiterRecord_.[[Timeout]] is finite.
       1. Perform EnterCriticalSection(_WL_).
-      1. Perform RemoveWaiter(_WL_, _waiterRecord_).
-      1. Perform NotifyWaiter(_WL_, _waiterRecord_).
+      1. If _waiterRecord_ is on the list of waiters in _WL_, then
+          1. Set _waiterRecord_.[[Result]] to `"timed-out"`.
+          1. Perform RemoveWaiter(_WL_, _waiterRecord_).
+          1. Perform NotifyWaiter(_WL_, _waiterRecord_).
       1. Perform LeaveCriticalSection(_WL_).
     </emu-alg>
   </emu-clause>
@@ -84,6 +80,9 @@
             1. <ins>Set _inserted_ to *true*.</ins>
       1. <ins>If _inserted_ is *false*, then</ins>
         1. <ins>Append _waiterRecord_ as the last element of _WL_.</ins>
+      1. <ins>If _waiterRecord_.[[Timeout]] is finite, then in parallel,</ins>
+        1. Wait _waiterRecord_.[[Timeout]] milliseconds.
+        1. Perform TriggerTimeout(_WL_, _waiterRecord_).</ins>
     </emu-alg>
   </emu-clause>
 
@@ -119,11 +118,9 @@
       a WaiterList _WL_ and <del>an agent signifier _W_</del><ins>a Record _waiterRecord_</ins>. It performs the following steps:</p>
     <emu-alg>
       1. Assert: The calling agent is in the critical section for _WL_.
-      1. Assert: <del>_W_</del><ins>_waiterRecord_</ins> is on the list of waiters.
-      1. <ins>Assert: _waiterRecord.[[Result]] is either the String `"ok"` or the String `"timed-out"`.</ins>
+      1. <del>Assert: _W_ is on the list of waiters in _WL_.</del>
+      1. <ins>Assert: _waiterRecord_.[[Result]] is either the String `"ok"` or the String `"timed-out"`.</ins>
       1. <del>Notify the agent _W_.</del>
-      1. <ins>If _waiterRecord_.[[Alarm]] is truthy, then</ins>
-        1. <ins>Perform CancelAlarm(_WL_, _waiterRecord_.[[Alarm]]).</ins>
       1. <ins>If _waiterRecord_.[[PromiseCapability]] is *undefined*, then</ins>
         1. <ins>NOTE: An *undefined* promise capability denotes a blocking wait.</ins>
         1. <ins>Notify the agent _waiterRecord_.[[AgentSignifier]].</ins>
@@ -134,39 +131,6 @@
     <emu-note>
       <p>The embedding may delay notifying <del>_W_</del><ins>the agent whose signifier is _waiter_.[[AgentSignifier]]</ins>, e.g. for resource management reasons, but <del>_W_</del><ins>that agent</ins> must eventually be notified in order to guarantee forward progress.</p>
     </emu-note>
-  </emu-clause>
-
-  <emu-clause id="sec-addalarm" aoid="AddAlarm">
-    <h1>AddAlarm( _WL_, _alarmFn_, _timeout_ )</h1>
-    <p><ins>This is a new abstract operation.</ins></p>
-    <p>The abstract operation AddAlarm takes three arguments, a WaiterList _WL_, a thunk _alarmFn_, and a nonnegative finite number _timeout_. It performs the following steps:</p>
-    <emu-alg>
-      1. Assert: The calling agent is in the critical section for _WL_.
-      1. Let _alarm_ be a truthy value that is not in _WL_'s alarm set.
-      1. Add _alarm_ to _WL_'s alarm set.
-      1. After _timeout_ milliseconds has passed, perform the following actions concurrently:
-        1. Perform EnterCriticalSection(_WL_).
-        1. If CancelAlarm(_WL_, _alarm_) is *true*, then
-          1. Perform ! Call(_alarmFn_, *undefined*, &laquo; &raquo;).
-        1. Perform LeaveCriticalSection(_WL_).
-        1. NOTE: _alarmFn_ is now dead.
-      1. Return _alarm_.
-    </emu-alg>
-  </emu-clause>
-
-  <emu-clause id="sec-cancelalarm" aoid="CancelAlarm">
-    <h1>CancelAlarm( _WL_, _alarm_ )</h1>
-    <p><ins>This is a new abstraction operation.</ins></p>
-    <p>The abstract operation CancelAlarm takes two arguments, a WaiterList _WL_, and a truthy value _alarm_. It performs the following steps:</p>
-    <emu-alg>
-      1. Assert: The calling agent is in the critical section for _WL_.
-      1. Assert: _alarm_ is a truthy value.
-      1. If _alarm_ is in _WL_'s alarm set, then
-        1. Remove _alarm_ from _WL_'s alarm set.
-        1. Return *true*.
-        1. NOTE: No alarm that subsequently triggers for _alarm_ (in the concurrent thread referenced in AddAlarm) will have any effect. If not called from AddAlarm, the thunk associated with _alarm_ is now dead and can be reclaimed; any scheduled timeout associated with alarm can be canceled.
-      1. Else return *false*.
-    </emu-alg>
   </emu-clause>
 
   <emu-clause id="sec-atomics.wait">
@@ -196,17 +160,9 @@
         1. <del>Assert: _W_ is not on the list of waiters in _WL_.</del>
       1. <del>Else,</del>
         1. <del>Perform RemoveWaiter(_WL_, _W_).</del>
-      1. <ins>Let _waiterRecord_ be a new Record { [[AgentSignifier]]: _W_, [[PromiseCapability]]: *undefined*, [[Alarm]]: *false*, [[Result]]: `"ok"` }.</ins>
-      1. <ins>If _t_ is finite, then</ins>
-        1. <ins>Let _stepsAlarm_ be the algorithm steps defined in Alarm Functions (<emu-xref href="#sec-alarm-functions"></emu-xref>).</ins>
-        1. <ins>Let _alarmFn_ be CreateBuiltinFunction(_stepsAlarm_, &laquo; [[WaiterList]], [[WaiterRecord]] &raquo;).</ins>
-        1. <ins>Set _alarmFn_.[[WaiterList]] to _WL_.</ins>
-        1. <ins>Set _alarmFn_.[[WaiterRecord]] to _W_.</ins>
-        1. <ins>Set _waiterRecord_.[[Alarm]] to AddAlarm(_WL_, _alarmFn_, _t_).</ins>
+      1. <ins>Let _waiterRecord_ be a new Record { [[AgentSignifier]]: _W_, [[PromiseCapability]]: *undefined*, [[Timeout]]: _t_, [[Result]]: `"ok"` }.</ins>
       1. <ins>Perform AddWaiter(_WL_, _waiterRecord_).</ins>
       1. <ins>Perform Suspend(_WL_, _W_).</ins>
-      1. <ins>If _waiterRecord_.[[Result]] is `"ok"` and _waiterRecord_.[[Alarm]] is a truthy value, then</ins>
-        1. <ins>Perform CancelAlarm(_WL_, _waiterRecord_.[[Alarm]]).</ins>
       1. Perform LeaveCriticalSection(_WL_).
       1. <del>If _notified_ is *true*, return the String `"ok"`.</del>
       1. Return <del>the String `"timed-out"`</del><ins>_waiterRecord_.[[Result]]</ins>.
@@ -237,13 +193,7 @@
         1. Perform ! Call(_capability_.[[Resolve]], *undefined*, &laquo; `"not-equal"` &raquo;).
         1. Return _promiseCapability_.[[Promise]].
       1. Let _W_ be AgentSignifier().
-      1. Let _waiterRecord_ be a new Record { [[AgentSignifier]]: _W_, [[PromiseCapability]]: _promiseCapability_, [[Alarm]]: *false*, [[Result]]: `"ok"` }.</ins>
-      1. Let _t_ is finite, then
-        1. Let _stepsAlarm_ be the algorithm steps defined in Alarm Functions (<emu-xref href="#sec-alarm-functions"></emu-xref>).
-        1. Let _alarmFn_ be CreateBuiltinFunction(_stepsAlarm_, &laquo; [[WaiterList]], [[WaiterRecord]] &raquo;).
-        1. Set _alarmFn_.[[WaiterList]] to _WL_.
-        1. Set _alarmFn_.[[WaiterRecord]] to _waiterRecord_.
-        1. Set _waiterRecord_.[[Alarm]] to AddAlarm(_WL_, _alarmFn_, _t_).
+      1. Let _waiterRecord_ be a new Record { [[AgentSignifier]]: _W_, [[PromiseCapability]]: _promiseCapability_, [[Timeout]]: _t_, [[Result]]: `"ok"` }.</ins>
       1. Perform AddWaiter(_WL_, _waiterRecord_).
       1. Perform LeaveCriticalSection(_WL_).
       1. Return _promiseCapability_.[[Promise]].
