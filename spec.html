@@ -179,8 +179,6 @@
       1. Let _v_ be ? ToInt32(_value_).
       1. Let _q_ be ? ToNumber(_timeout_).
       1. If _q_ is *NaN*, let _t_ be *+&infin;*, else let _t_ be max(_q_, 0).
-      1. Let _B_ be AgentCanSuspend().
-      1. If _B_ is *false*, throw a *TypeError* exception.
       1. Let _block_ be _buffer_.[[ArrayBufferData]].
       1. Let _offset_ be _typedArray_.[[ByteOffset]].
       1. Let _indexedPosition_ be (_i_ &times; 4) + _offset_.
