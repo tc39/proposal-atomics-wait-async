@@ -266,6 +266,47 @@
     </emu-note>
   </emu-clause>
 
+  <emu-clause id="sec-dowait" aoid="DoWait">
+    <h1>DoWait ( _mode_, _typedArray_, _index_, _value_, _timeout_ )</h1>
+    <p><ins>This is a new abstract operation.</ins></p>
+    <p>The abstract operation DoWait takes five arguments, a String _mode_, and values _typedArray_, _idnex_, _value_, and _timeout_. It performs the following steps:</p>
+    <emu-alg>
+      1. Assert: _mode_ is either `"sync"` or `"async"`.
+      1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_, *true*).
+      1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
+      1. Let _v_ be ? ToInt32(_value_).
+      1. Let _q_ be ? ToNumber(_timeout_).
+      1. If _q_ is *NaN*, let _t_ be *+&infin;*, else let _t_ be max(_q_, 0).
+      1. If _mode_ is `"sync"`, then
+        1. Let _B_ be AgentCanSuspend().
+        1. If _B_ is *false*, throw a *TypeError* exception.
+      1. Let _block_ be _buffer_.[[ArrayBufferData]].
+      1. Let _offset_ be _typedArray_.[[ByteOffset]].
+      1. Let _indexedPosition_ be (_i_ &times; 4) + _offset_.
+      1. Let _WL_ be GetWaiterList(_block_, _indexedPosition_).
+      1. Let _promiseCapability_ be *undefined*.
+      1. If _mode_ is `"async"`, then
+        1. Let _promiseCapability_ be ! NewPromiseCapability(%Promise%).
+      1. Perform EnterCriticalSection(_WL_).
+      1. Let _w_ be ! AtomicLoad(_typedArray_, _i_).
+      1. If _v_ is not equal to _w_, then
+        1. Perform LeaveCriticalSection(_WL_).
+        1. If _mode_ is `"sync"`, then
+          1. Return the String `"not-equal"`.
+        1. Perform ! Call(_capability_.[[Resolve]], *undefined*, &laquo; `"not-equal"` &raquo;).
+        1. Return _promiseCapability_.[[Promise]].
+      1. Let _W_ be AgentSignifier().
+      1. Let _waiterRecord_ be a new Waiter Record { [[AgentSignifier]]: _W_, [[PromiseCapability]]: _promiseCapability_, [[Timeout]]: _t_, [[Result]]: `"ok"` }.
+      1. Perform AddWaiter(_WL_, _waiterRecord_).
+      1. If _mode_ is `"sync"`, then
+        1. Perform Suspend(_WL_, _W_).
+      1. Perform LeaveCriticalSection(_WL_).
+      1. If _mode_ is `"sync"`, then
+        1. Return _waiterRecord_.[[Result]].
+      1. Return _promiseCapability_.[[Promise]].
+    </emu-alg>
+  </emu-clause>
+
   <emu-clause id="sec-atomics.wait">
     <h1>Atomics.wait ( _typedArray_, _index_, _value_, _timeout_ )</h1>
     <p>`Atomics.wait` puts the calling agent in a wait queue and puts it to sleep until it is notified or the sleep times out. The following steps are taken:</p>
@@ -307,27 +348,7 @@
     <p><ins>This is a new method.</ins></p>
     <p>`Atomics.waitAsync` returns a Promise that is resolved when the calling agent is notified or the sleep times out. The following steps are taken:</p>
     <emu-alg>
-      1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_, *true*).
-      1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
-      1. Let _v_ be ? ToInt32(_value_).
-      1. Let _q_ be ? ToNumber(_timeout_).
-      1. If _q_ is *NaN*, let _t_ be *+&infin;*, else let _t_ be max(_q_, 0).
-      1. Let _block_ be _buffer_.[[ArrayBufferData]].
-      1. Let _offset_ be _typedArray_.[[ByteOffset]].
-      1. Let _indexedPosition_ be (_i_ &times; 4) + _offset_.
-      1. Let _WL_ be GetWaiterList(_block_, _indexedPosition_).
-      1. Let _promiseCapability_ be ! NewPromiseCapability(%Promise%).
-      1. Perform EnterCriticalSection(_WL_).
-      1. Let _w_ be ! AtomicLoad(_typedArray_, _i_).
-      1. If _v_ is not equal to _w_, then
-        1. Perform LeaveCriticalSection(_WL_).
-        1. Perform ! Call(_capability_.[[Resolve]], *undefined*, &laquo; `"not-equal"` &raquo;).
-        1. Return _promiseCapability_.[[Promise]].
-      1. Let _W_ be AgentSignifier().
-      1. Let _waiterRecord_ be a new Waiter Record { [[AgentSignifier]]: _W_, [[PromiseCapability]]: _promiseCapability_, [[Timeout]]: _t_, [[Result]]: `"ok"` }.</ins>
-      1. Perform AddWaiter(_WL_, _waiterRecord_).
-      1. Perform LeaveCriticalSection(_WL_).
-      1. Return _promiseCapability_.[[Promise]].
+      1. Return DoWait(`"async"`, _typedArray_, _index_, _value_, _timeout_).
     </emu-alg>
   </emu-clause>
 
