@@ -28,13 +28,113 @@
 
   <emu-clause id="sec-getwaiterlist">
     <h1>GetWaiterList ( _block_, _i_ )</h1>
-    <p>A <dfn>WaiterList</dfn> is a semantic object that contains an ordered list of those agents that are waiting on a location (_block_, _i_) in shared memory; _block_ is a Shared Data Block and _i_ a byte offset into the memory of _block_.</p>
-    <p>A <dfn>WaiterList</dfn> is a semantic object that contains an ordered List <del>of those agents that are</del><ins>of Records of the agent signifier, promise capability (possibly *undefined*), and timeout of the agent that is</ins> waiting on a location (_block_, _i_) in shared memory; _block_ is a Shared Data Block and _i_ a byte offset into the memory of _block_. A WaiterList object also optionally contains a Synchronize event denoting the previous leaving of its critical section.</p>
-    <p><ins>There can be multiple entries in a WaiterList with the same agent signifier.</ins></p>
-    <p>The agent cluster has a store of WaiterList objects; the store is indexed by (_block_, _i_). WaiterLists are agent-independent: a lookup in the store of WaiterLists by (_block_, _i_) will result in the same WaiterList object in any agent in the agent cluster.</p>
+    <p><ins>A <dfn>Waiter Record</dfn> is a Record value used to denote a particular call to `Atomics.wait` or `Atomics.waitAsync`. It has fields as defined by <emu-xref href="#table-waiterrecord"></emu-xref>.</ins></p>
+    <emu-table id="table-waiterrecord" caption="Waiter Record Fields">
+      <table>
+        <tbody>
+          <tr>
+            <th>
+              Field Name
+            </th>
+            <th>
+              Value
+            </th>
+            <th>
+              Meaning
+            </th>
+          </tr>
+          <tr>
+            <td>
+              [[AgentSignifier]]
+            </td>
+            <td>
+              An agent signifier
+            </td>
+            <td>
+              The agent that called `Atomics.wait` or `Atomics.waitAsync`.
+            </td>
+          </tr>
+          <tr>
+            <td>
+              [[PromiseCapability]]
+            </td>
+            <td>
+              A PromiseCapability Record or *undefined*
+            </td>
+            <td>
+              If denoting a call to `Atomics.waitAsync`, the resulting promise, otherwise *undefined*.
+            </td>
+          </tr>
+          <tr>
+            <td>
+              [[Timeout]]
+            </td>
+            <td>
+              A non-negative Number
+            </td>
+            <td>
+              The timeout in milliseconds.
+            </td>
+          </tr>
+          <tr>
+            <td>
+              [[Result]]
+            </td>
+            <td>
+              `"ok"` or `"timed-out"`
+            </td>
+            <td>
+              The return value of the call.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </emu-table>
+    <p>A <dfn>WaiterList</dfn> is a <del>semantic object that contains an ordered List of those agents that are waiting on a location (_block_, _i_) in shared memory; _block_ is a Shared Data Block and _i_ a byte offset into the memory of _block_. A WaiterList object also optionally contains a Synchronize event denoting the previous leaving of its critical section.</del><ins>Record value used to explain waiting and notification of agents via `Atomics.wait`, `Atomics.waitAsync`, and `Atomics.notify`. It has fields as defined by <emu-xref href="#table-waiterlist"></emu-xref>.</ins></p>
+    <emu-table id="table-waiterlist" caption="WaiterList Record Fields">
+      <table>
+        <tbody>
+          <tr>
+            <th>
+              Field Name
+            </th>
+            <th>
+              Value
+            </th>
+            <th>
+              Meaning
+            </th>
+          </tr>
+          <tr>
+            <td>
+              [[Waiters]]
+            </td>
+            <td>
+              An ordered List of Waiter Records
+            </td>
+            <td>
+              The calls to `Atomics.wait` or `Atomics.waitAsync` that are waiting on the location with which this WaiterList is associated.
+            </td>
+          </tr>
+          <tr>
+            <td>
+              [[MostRecentLeaveEvent]]
+            </td>
+            <td>
+              A Synchronize event or *undefined*
+            </td>
+            <td>
+              The event of the most recent leaving of its critical section, or *undefined* if its critical section has never been entered.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </emu-table>
+    <p><ins>There can be multiple Waiter Records in a WaiterList with the same agent signifier.</ins></p>
+    <p>The agent cluster has a store of WaiterList <del>objects</del><ins>Records</ins>; the store is indexed by (_block_, _i_)<ins>, where _block_ is a Shared Data Block and _i_ a byte offset into the memory of _block_</ins>. WaiterLists are agent-independent: a lookup in the store of WaiterLists by (_block_, _i_) will result in the same WaiterList object in any agent in the agent cluster.</p>
     <p>Operations on a WaiterList&mdash;adding and removing waiting agents, traversing the list of agents, suspending and notifying agents on the list, setting and retrieving the Synchronize event&mdash;may only be performed by agents that have entered the WaiterList's critical section.</p>
     <emu-note>
-      <p>Conceptually, agents that call either `Atomics.wait` or `Atomics.waitAsync` are appended to WaiterList. If the call was to `Atomics.wait` in an agent A, a record with an *undefined* promise capability is inserted to be immediately preceding the first element whose agent signifier is A. If the call was to `Atomics.waitAsync`, the pair of the result PromiseCapability Record and A (_capability_, A) is appended.</p>
+      <p>Conceptually, agents that call either `Atomics.wait` or `Atomics.waitAsync` are appended to WaiterList. If the call was to `Atomics.wait` in an agent A, a Waiter Record with an *undefined* [[PromiseCapability]] is inserted to be immediately preceding the first element whose [[AgentSignifier]] is A. If the call was to `Atomics.waitAsync`, a WaiterRecord whose [[PromiseCapability]] is the resulting PromiseCapability Record is appended.</p>
       <p>This enables two design goals:</p>
       <ol>
         <li>Waiting agents are notified in FIFO order for fairness.</li>
@@ -50,14 +150,47 @@
     </emu-alg>
   </emu-clause>
 
+  <emu-clause id="sec-entercriticalsection" aoid="EnterCriticalSection">
+    <h1>EnterCriticalSection ( _WL_ )</h1>
+    <p>The abstract operation EnterCriticalSection takes one argument, a WaiterList _WL_. It performs the following steps:</p>
+    <emu-alg>
+      1. Assert: The calling agent is not in the critical section for any WaiterList.
+      1. Wait until no agent is in the critical section for _WL_, then enter the critical section for _WL_ (without allowing any other agent to enter).
+      1. If _WL_<del> has a Synchronize event</del><ins>.[[MostRecentLeaveEvent]] is *undefined*</ins>, then
+      1. NOTE: A _WL_ whose critical section has been entered at least once has a Synchronize event set by LeaveCriticalSection.
+      1. Let _execution_ be the [[CandidateExecution]] field of the surrounding agent's Agent Record.
+      1. Let _eventsRecord_ be the Agent Events Record in _execution_.[[EventsRecords]] whose [[AgentSignifier]] is AgentSignifier().
+      1. Let _entererEventList_ be _eventsRecord_.[[EventList]].
+      1. Let _enterEvent_ be a new Synchronize event.
+      1. Append _enterEvent_ to _entererEventList_.
+      1. Let _leaveEvent_ be the Synchronize event in _WL_.
+      1. Append (_leaveEvent_, _enterEvent_) to _eventRecords_.[[AgentSynchronizesWith]].
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-leavecriticalsection" aoid="LeaveCriticalSection">
+    <h1>LeaveCriticalSection ( _WL_ )</h1>
+    <p>The abstract operation LeaveCriticalSection takes one argument, a WaiterList _WL_. It performs the following steps:</p>
+    <emu-alg>
+      1. Assert: The calling agent is in the critical section for _WL_.
+      1. Let _execution_ be the [[CandidateExecution]] field of the calling surrounding's Agent Record.
+      1. Let _eventsRecord_ be the Agent Events Record in _execution_.[[EventsRecords]] whose [[AgentSignifier]] is AgentSignifier().
+      1. Let _leaverEventList_ be _eventsRecord_.[[EventList]].
+      1. Let _leaveEvent_ be a new Synchronize event.
+      1. Append _leaveEvent_ to _leaverEventList_.
+      1. Set <del>the Synchronize event in _WL_ to _leaveEvent_</del><ins>_WL_.[[MostRecentLeaveEvent]] to _leaveEvent_</ins>.
+      1. Leave the critical section for _WL_.
+    </emu-alg>
+  </emu-clause>
+
   <emu-clause id="sec-triggertimeout" aoid="TriggerTimeout">
     <h1>TriggerTimeout( _WL_, _waiterRecord_ )</h1>
     <p><ins>This is a new abstract operation.</ins></p>
-    <p>The abstract operation TriggerTimeout takes two arguments, a WaiterList _WL_ and a Record _waiterRecord_. It performs the following steps:</p>
+    <p>The abstract operation TriggerTimeout takes two arguments, a WaiterList _WL_ and a Waiter Record _waiterRecord_. It performs the following steps:</p>
     <emu-alg>
       1. Assert: _waiterRecord_.[[Timeout]] is finite.
       1. Perform EnterCriticalSection(_WL_).
-      1. If _waiterRecord_ is on the list of waiters in _WL_, then
+      1. If _waiterRecord_ is in _WL_.[[Waiters]], then
           1. Set _waiterRecord_.[[Result]] to `"timed-out"`.
           1. Perform RemoveWaiter(_WL_, _waiterRecord_).
           1. Perform NotifyWaiter(_WL_, _waiterRecord_).
@@ -67,32 +200,32 @@
 
   <emu-clause id="sec-addwaiter" aoid="AddWaiter">
     <h1>AddWaiter ( _WL_, <del>_W_</del><ins>_waiterRecord_</ins> )</h1>
-    <p>The abstract operation AddWaiter takes two arguments, a WaiterList _WL_ and <del>an agent signifier _W_</del><ins>a Record _waiterRecord_</ins>. It performs the following steps:</p>
+    <p>The abstract operation AddWaiter takes two arguments, a WaiterList _WL_ and <del>an agent signifier _W_</del><ins>a Waiter Record _waiterRecord_</ins>. It performs the following steps:</p>
     <emu-alg>
       1. Assert: The calling agent is in the critical section for _WL_.
       1. <del>Assert: _W_ is not on the list of waiters in any WaiterList.</del>
       1. <ins>Let _inserted_ be *false*.</ins>
       1. <ins>If _waiterRecord_.[[PromiseCapability]] is *undefined*, then</ins>
-        1. <ins>Assert: There is no record in _WL_ whose [[AgentSignifier]] field is _waiterRecord_.[[AgentSignifier]].</ins>
-        1. <ins>For each element _wr_ in _WL_, do</ins>
+        1. <ins>Assert: There is no Waiter Record in _WL_.[[Waiters]] whose [[AgentSignifier]] field is _waiterRecord_.[[AgentSignifier]].</ins>
+        1. <ins>For each element _wr_ in _WL_.[[Waiters]], do</ins>
           1. <ins>If _wr_.[[AgentSignifier]] is _waiterRecord_.[[AgentSignifier]], then</ins>
-            1. <ins>Insert _waiterRecord_ to immediately precede _wr_.</ins>
+            1. <ins>Insert _waiterRecord_ to immediately precede _wr_ in _WL_.[[Waiters]].</ins>
             1. <ins>Set _inserted_ to *true*.</ins>
       1. <ins>If _inserted_ is *false*, then</ins>
-        1. <ins>Append _waiterRecord_ as the last element of _WL_.</ins>
+        1. <ins>Append _waiterRecord_ as the last element of _WL_.[[Waiters]]</ins>
       1. <ins>If _waiterRecord_.[[Timeout]] is finite, then in parallel,</ins>
-        1. Wait _waiterRecord_.[[Timeout]] milliseconds.
-        1. Perform TriggerTimeout(_WL_, _waiterRecord_).</ins>
+        1. <ins>Wait _waiterRecord_.[[Timeout]] milliseconds.</ins>
+        1. <ins>Perform TriggerTimeout(_WL_, _waiterRecord_).</ins>
     </emu-alg>
   </emu-clause>
 
   <emu-clause id="sec-removewaiter" aoid="RemoveWaiter">
     <h1>RemoveWaiter ( _WL_, <del>_W_</del><ins>_waiterRecord_</ins> )</h1>
-    <p>The abstract operation RemoveWaiter takes two arguments, a WaiterList _WL_ and <del>an agent signifier _W_</del><ins>a Record _waiterRecord_</ins>. It performs the following steps:</p>
+    <p>The abstract operation RemoveWaiter takes two arguments, a WaiterList _WL_ and <del>an agent signifier _W_</del><ins>a Waiter Record _waiterRecord_</ins>. It performs the following steps:</p>
     <emu-alg>
       1. Assert: The calling agent is in the critical section for _WL_.
-      1. Assert: <del>_W_</del><ins>_waiterRecord_</ins> is on the list of waiters in _WL_.
-      1. Remove <del>_W_</del><ins>_waiterRecord_</ins> from the list of waiters in _WL_.
+      1. Assert: <del>_W_</del><ins>_waiterRecord_</ins> is <del>on the list of waiters</del> in _WL_<ins>.[[Waiters]]</ins>.
+      1. Remove <del>_W_</del><ins>_waiterRecord_</ins> from <del>the list of waiters in</del> _WL_<ins>.[[Waiters]]</ins>.
     </emu-alg>
   </emu-clause>
 
@@ -103,7 +236,7 @@
     <emu-alg>
       1. Assert: The calling agent is in the critical section for _WL_.
       1. Assert: _W_ is equal to AgentSignifier().
-      1. Assert: <del>_W_ is on the list of waiters.</del><ins>There is a record</ins> in _WL_ <ins>whose [[AgentSignifier]] field is _W_ and whose [[PromiseCapability]] field is *undefined*.</ins>
+      1. Assert: <del>_W_ is on the list of waiters.</del><ins>There is a Waiter Record</ins> in _WL_<ins>.[[Waiters]] whose [[AgentSignifier]] field is _W_ and whose [[PromiseCapability]] field is *undefined*.</ins>
       1. Assert: AgentCanSuspend() is *true*.
       1. Perform LeaveCriticalSection(_WL_) and suspend _W_<del> for up to _timeout_ milliseconds</del>, performing the combined operation in such a way that a notification that arrives after the critical section is exited but before the suspension takes effect is not lost.  _W_ can <del>notify either because the timeout expired or because it was</del><ins>be</ins> notified explicitly by another agent calling NotifyWaiter(_WL_, _waiterRecord_, ...), and not for any other reasons at all.
       1. Perform EnterCriticalSection(_WL_).
@@ -115,7 +248,7 @@
   <emu-clause id="sec-notifywaiter" aoid="NotifyWaiter">
     <h1>NotifyWaiter ( _WL_, <del>_W_</del><ins>_waiterRecord_</ins> )</h1>
     <p>The abstract operation NotifyWaiter takes two arguments,
-      a WaiterList _WL_ and <del>an agent signifier _W_</del><ins>a Record _waiterRecord_</ins>. It performs the following steps:</p>
+      a WaiterList _WL_ and <del>an agent signifier _W_</del><ins>a Waiter Record _waiterRecord_</ins>. It performs the following steps:</p>
     <emu-alg>
       1. Assert: The calling agent is in the critical section for _WL_.
       1. <del>Assert: _W_ is on the list of waiters in _WL_.</del>
@@ -160,7 +293,7 @@
         1. <del>Assert: _W_ is not on the list of waiters in _WL_.</del>
       1. <del>Else,</del>
         1. <del>Perform RemoveWaiter(_WL_, _W_).</del>
-      1. <ins>Let _waiterRecord_ be a new Record { [[AgentSignifier]]: _W_, [[PromiseCapability]]: *undefined*, [[Timeout]]: _t_, [[Result]]: `"ok"` }.</ins>
+      1. <ins>Let _waiterRecord_ be a new Waiter Record { [[AgentSignifier]]: _W_, [[PromiseCapability]]: *undefined*, [[Timeout]]: _t_, [[Result]]: `"ok"` }.</ins>
       1. <ins>Perform AddWaiter(_WL_, _waiterRecord_).</ins>
       1. <ins>Perform Suspend(_WL_, _W_).</ins>
       1. Perform LeaveCriticalSection(_WL_).
@@ -191,7 +324,7 @@
         1. Perform ! Call(_capability_.[[Resolve]], *undefined*, &laquo; `"not-equal"` &raquo;).
         1. Return _promiseCapability_.[[Promise]].
       1. Let _W_ be AgentSignifier().
-      1. Let _waiterRecord_ be a new Record { [[AgentSignifier]]: _W_, [[PromiseCapability]]: _promiseCapability_, [[Timeout]]: _t_, [[Result]]: `"ok"` }.</ins>
+      1. Let _waiterRecord_ be a new Waiter Record { [[AgentSignifier]]: _W_, [[PromiseCapability]]: _promiseCapability_, [[Timeout]]: _t_, [[Result]]: `"ok"` }.</ins>
       1. Perform AddWaiter(_WL_, _waiterRecord_).
       1. Perform LeaveCriticalSection(_WL_).
       1. Return _promiseCapability_.[[Promise]].
