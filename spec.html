@@ -206,7 +206,7 @@
       1. <del>Assert: _W_ is not on the list of waiters in any WaiterList.</del>
       1. <ins>Let _inserted_ be *false*.</ins>
       1. <ins>If _waiterRecord_.[[PromiseCapability]] is *undefined*, then</ins>
-        1. <ins>Assert: There is no Waiter Record in _WL_.[[Waiters]] whose [[AgentSignifier]] field is _waiterRecord_.[[AgentSignifier]].</ins>
+        1. <ins>Assert: There is no Waiter Record in _WL_.[[Waiters]] whose [[PromiseCapability]] field is *undefined* and [[AgentSignifier]] field is _waiterRecord_.[[AgentSignifier]].</ins>
         1. <ins>For each element _wr_ in _WL_.[[Waiters]], do</ins>
           1. <ins>If _wr_.[[AgentSignifier]] is _waiterRecord_.[[AgentSignifier]], then</ins>
             1. <ins>Insert _waiterRecord_ to immediately precede _wr_ in _WL_.[[Waiters]].</ins>
