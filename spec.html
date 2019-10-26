@@ -157,14 +157,14 @@
       1. Assert: The calling agent is not in the critical section for any WaiterList.
       1. Wait until no agent is in the critical section for _WL_, then enter the critical section for _WL_ (without allowing any other agent to enter).
       1. If _WL_<del> has a Synchronize event</del><ins>.[[MostRecentLeaveEvent]] is *undefined*</ins>, then
-      1. NOTE: A _WL_ whose critical section has been entered at least once has a Synchronize event set by LeaveCriticalSection.
-      1. Let _execution_ be the [[CandidateExecution]] field of the surrounding agent's Agent Record.
-      1. Let _eventsRecord_ be the Agent Events Record in _execution_.[[EventsRecords]] whose [[AgentSignifier]] is AgentSignifier().
-      1. Let _entererEventList_ be _eventsRecord_.[[EventList]].
-      1. Let _enterEvent_ be a new Synchronize event.
-      1. Append _enterEvent_ to _entererEventList_.
-      1. Let _leaveEvent_ be the Synchronize event in _WL_.
-      1. Append (_leaveEvent_, _enterEvent_) to _eventRecords_.[[AgentSynchronizesWith]].
+        1. NOTE: A _WL_ whose critical section has been entered at least once has a Synchronize event set by LeaveCriticalSection.
+        1. Let _execution_ be the [[CandidateExecution]] field of the surrounding agent's Agent Record.
+        1. Let _eventsRecord_ be the Agent Events Record in _execution_.[[EventsRecords]] whose [[AgentSignifier]] is AgentSignifier().
+        1. Let _entererEventList_ be _eventsRecord_.[[EventList]].
+        1. Let _enterEvent_ be a new Synchronize event.
+        1. Append _enterEvent_ to _entererEventList_.
+        1. Let _leaveEvent_ be the Synchronize event in _WL_.
+        1. Append (_leaveEvent_, _enterEvent_) to _eventRecords_.[[AgentSynchronizesWith]].
     </emu-alg>
   </emu-clause>
 
