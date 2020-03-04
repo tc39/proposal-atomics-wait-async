@@ -301,36 +301,34 @@
     <h1>Atomics.wait ( _typedArray_, _index_, _value_, _timeout_ )</h1>
     <p>`Atomics.wait` puts the calling agent in a wait queue and puts it to sleep until it is notified or the sleep times out. The following steps are taken:</p>
     <emu-alg>
-      1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_, *true*).
-      1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
-      1. If _arrayTypeName_ is *"BigInt64Array"*, let _v_ be ? ToBigInt64(_value_).
-      1. Otherwise, let _v_ be ? ToInt32(_value_).
-      1. Let _q_ be ? ToNumber(_timeout_).
-      1. If _q_ is *NaN*, let _t_ be *+&infin;*, else let _t_ be max(_q_, 0).
-      1. Let _B_ be AgentCanSuspend().
-      1. If _B_ is *false*, throw a *TypeError* exception.
-      1. Let _block_ be _buffer_.[[ArrayBufferData]].
-      1. Let _offset_ be _typedArray_.[[ByteOffset]].
-      1. Let _indexedPosition_ be (_i_ &times; 4) + _offset_.
-      1. Let _WL_ be GetWaiterList(_block_, _indexedPosition_).
-      1. Perform EnterCriticalSection(_WL_).
-      1. Let _w_ be ! AtomicLoad(_typedArray_, _i_).
-      1. If _v_ is not equal to _w_, then
-        1. Perform LeaveCriticalSection(_WL_).
-        1. Return the String `"not-equal"`.
-      1. Let _W_ be AgentSignifier().
+      1. <del>Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_, *true*).</del>
+      1. <del>Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).</del>
+      1. <del>If _arrayTypeName_ is *"BigInt64Array"*, let _v_ be ? ToBigInt64(_value_).</del>
+      1. <del>Otherwise, let _v_ be ? ToInt32(_value_).</del>
+      1. <del>Let _q_ be ? ToNumber(_timeout_).</del>
+      1. <del>If _q_ is *NaN*, let _t_ be *+&infin;*, else let _t_ be max(_q_, 0).</del>
+      1. <del>Let _B_ be AgentCanSuspend().</del>
+      1. <del>If _B_ is *false*, throw a *TypeError* exception.</del>
+      1. <del>Let _block_ be _buffer_.[[ArrayBufferData]].</del>
+      1. <del>Let _offset_ be _typedArray_.[[ByteOffset]].</del>
+      1. <del>Let _indexedPosition_ be (_i_ &times; 4) + _offset.</del>
+      1. <del>Let _WL_ be GetWaiterList(_block_, _indexedPosition_).</del>
+      1. <del>Perform EnterCriticalSection(_WL_).</del>
+      1. <del>Let _w_ be ! AtomicLoad(_typedArray_, _i_).</del>
+      1. <del>If _v_ is not equal to _w_, then</del>
+        1. <del>Perform LeaveCriticalSection(_WL_).</del>
+        1. <del>Return the String `"not-equal"`.</del>
+      1. <del>Let _W_ be AgentSignifier().</del>
       1. <del>Perform AddWaiter(_WL_, _W_).</del>
       1. <del>Let _notified_ be Suspend(_WL_, _W_, _t_).</del>
       1. <del>If _notified_ is *true*, then</del>
         1. <del>Assert: _W_ is not on the list of waiters in _WL_.</del>
       1. <del>Else,</del>
         1. <del>Perform RemoveWaiter(_WL_, _W_).</del>
-      1. <ins>Let _waiterRecord_ be a new Waiter Record { [[AgentSignifier]]: _W_, [[PromiseCapability]]: *undefined*, [[Timeout]]: _t_, [[Result]]: `"ok"` }.</ins>
-      1. <ins>Perform AddWaiter(_WL_, _waiterRecord_).</ins>
-      1. <ins>Perform Suspend(_WL_, _W_).</ins>
-      1. Perform LeaveCriticalSection(_WL_).
+      1. <del>Perform LeaveCriticalSection(_WL_).</del>
       1. <del>If _notified_ is *true*, return the String `"ok"`.</del>
-      1. Return <del>the String `"timed-out"`</del><ins>_waiterRecord_.[[Result]]</ins>.
+      1. <del>Return the String `"timed-out"`.</del>
+      1. <ins>Return DoWait(~sync~, _typedArray_, _index_, _value_, _timeout_).</ins>
     </emu-alg>
   </emu-clause>
 
