@@ -263,7 +263,8 @@
     <emu-alg>
       1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_, *true*).
       1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
-      1. Let _v_ be ? ToInt32(_value_).
+      1. If _arrayTypeName_ is *"BigInt64Array"*, let _v_ be ? ToBigInt64(_value_).
+      1. Otherwise, let _v_ be ? ToInt32(_value_).
       1. Let _q_ be ? ToNumber(_timeout_).
       1. If _q_ is *NaN*, let _t_ be *+&infin;*, else let _t_ be max(_q_, 0).
       1. If _mode_ is ~sync~, then
@@ -302,7 +303,8 @@
     <emu-alg>
       1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_, *true*).
       1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
-      1. Let _v_ be ? ToInt32(_value_).
+      1. If _arrayTypeName_ is *"BigInt64Array"*, let _v_ be ? ToBigInt64(_value_).
+      1. Otherwise, let _v_ be ? ToInt32(_value_).
       1. Let _q_ be ? ToNumber(_timeout_).
       1. If _q_ is *NaN*, let _t_ be *+&infin;*, else let _t_ be max(_q_, 0).
       1. Let _B_ be AgentCanSuspend().
