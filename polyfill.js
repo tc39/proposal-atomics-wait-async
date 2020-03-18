@@ -71,7 +71,7 @@
     // Atomics.wait, or, in the case something went completely wrong, it is
     // rejected with an error string.
 
-    Atomics.waitAsync = function (ia, index_, value_, timeout_) {
+    function waitAsync(ia, index_, value_, timeout_) {
         if (typeof ia != "object" || !(ia instanceof Int32Array) || !(ia.buffer instanceof SharedArrayBuffer))
             throw new TypeError("Expected shared memory");
 
@@ -128,5 +128,12 @@
             h.postMessage(['wait', ia, index, value, timeout]);
         })
     }
+
+    Object.defineProperty(Atomics, 'waitAsync', {
+        value: waitAsync,
+        configurable: true,
+        enumerable: false,
+        writable: true,
+    });
 })();
 
