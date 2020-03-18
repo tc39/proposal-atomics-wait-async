@@ -66,20 +66,32 @@
         helpers.push(h);
     }
 
+    function ToBigInt64(value) {
+        let n = BigInt(value);
+        let int64bit = n % (2n ** 64n);
+        if (int64bit > (2n ** 63n)) {
+            return int64bit - (2n ** 64n);
+        }
+        return int64bit;
+    }
+
     // Atomics.waitAsync always returns a promise.  Throws standard errors
     // for parameter validation.  The promise is resolved with a string as from
     // Atomics.wait, or, in the case something went completely wrong, it is
     // rejected with an error string.
 
     function waitAsync(ia, index_, value_, timeout_) {
-        if (typeof ia != "object" || !(ia instanceof Int32Array) || !(ia.buffer instanceof SharedArrayBuffer))
-            throw new TypeError("Expected shared memory");
+        if (typeof ia != "object" ||
+            (!(ia instanceof Int32Array) && !(ia instanceof BigInt64Array)) ||
+            !(ia.buffer instanceof SharedArrayBuffer)) {
+                throw new TypeError("Expected shared memory");
+        }
 
         // These conversions only approximate the desired semantics but are
         // close enough for the polyfill.
-
+        let coersion = ia instanceof BigInt64Array ? (v => ToBigInt64(v)) : (v => v|0);
         let index = index_|0;
-        let value = value_|0;
+        let value = coersion(value_);
         let timeout = timeout_ === undefined ? Infinity : +timeout_;
 
         // Range checking for the index.
@@ -136,4 +148,3 @@
         writable: true,
     });
 })();
-
