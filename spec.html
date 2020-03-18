@@ -263,6 +263,7 @@
     <emu-alg>
       1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_, *true*).
       1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
+      1. Let _arrayTypeName_ be _typedArray_.[[TypedArrayName]].
       1. If _arrayTypeName_ is *"BigInt64Array"*, let _v_ be ? ToBigInt64(_value_).
       1. Otherwise, let _v_ be ? ToInt32(_value_).
       1. Let _q_ be ? ToNumber(_timeout_).
