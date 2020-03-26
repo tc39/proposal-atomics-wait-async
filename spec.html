@@ -261,7 +261,7 @@
     <p><ins>This is a new abstract operation.</ins></p>
     <p>The abstract operation DoWait takes five arguments, _mode_ which is one of (~sync~, ~async~), and values _typedArray_, _idnex_, _value_, and _timeout_. It performs the following steps:</p>
     <emu-alg>
-      1. If _mode_ is ~async~, then let _promiseCapability_ to ! NewPromiseCapability(%Promise%).
+      1. If _mode_ is ~async~, then let _promiseCapability_ be ! NewPromiseCapability(%Promise%).
       1. Let _buffer_ be ValidateSharedIntegerTypedArray(_typedArray_, *true*).
       1. If _mode_ is ~sync~, then
         1. ReturnIfAbrupt(_buffer_).
