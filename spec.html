@@ -261,12 +261,29 @@
     <p><ins>This is a new abstract operation.</ins></p>
     <p>The abstract operation DoWait takes five arguments, _mode_ which is one of (~sync~, ~async~), and values _typedArray_, _idnex_, _value_, and _timeout_. It performs the following steps:</p>
     <emu-alg>
-      1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_, *true*).
-      1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
+      1. If _mode_ is ~async~, then let _promiseCapability_ to ! NewPromiseCapability(%Promise%).
+      1. Let _buffer_ be ValidateSharedIntegerTypedArray(_typedArray_, *true*).
+      1. If _mode_ is ~sync~, then
+        1. ReturnIfAbrupt(_buffer_).
+      1. Else,
+        1. IfAbruptRejectPromise(_buffer_, _promiseCapability_).
+      1. Let _i_ be ValidateAtomicAccess(_typedArray_, _index_).
+      1. If _mode_ is ~sync~, then
+        1. ReturnIfAbrupt(_i_).
+      1. Else,
+        1. IfAbruptRejectPromise(_i_, _promiseCapability_).
       1. Let _arrayTypeName_ be _typedArray_.[[TypedArrayName]].
-      1. If _arrayTypeName_ is *"BigInt64Array"*, let _v_ be ? ToBigInt64(_value_).
-      1. Otherwise, let _v_ be ? ToInt32(_value_).
-      1. Let _q_ be ? ToNumber(_timeout_).
+      1. If _arrayTypeName_ is *"BigInt64Array"*, let _v_ be ToBigInt64(_value_).
+      1. Otherwise, let _v_ be ToInt32(_value_).
+      1. If _mode_ is ~sync~, then
+        1. ReturnIfAbrupt(_v_).
+      1. Else,
+        1. IfAbruptRejectPromise(_v_, _promiseCapability_).
+      1. Let _q_ be ToNumber(_timeout_).
+      1. If _mode_ is ~sync~, then
+        1. ReturnIfAbrupt(_q_).
+      1. Else,
+        1. IfAbruptRejectPromise(_q_, _promiseCapability_).
       1. If _q_ is *NaN*, let _t_ be *+&infin;*, else let _t_ be max(_q_, 0).
       1. If _mode_ is ~sync~, then
         1. Let _B_ be AgentCanSuspend().
@@ -275,9 +292,6 @@
       1. Let _offset_ be _typedArray_.[[ByteOffset]].
       1. Let _indexedPosition_ be (_i_ &times; 4) + _offset_.
       1. Let _WL_ be GetWaiterList(_block_, _indexedPosition_).
-      1. Let _promiseCapability_ be *undefined*.
-      1. If _mode_ is ~async~, then
-        1. Set _promiseCapability_ to ! NewPromiseCapability(%Promise%).
       1. Perform EnterCriticalSection(_WL_).
       1. Let _w_ be ! AtomicLoad(_typedArray_, _i_).
       1. If _v_ is not equal to _w_, then
