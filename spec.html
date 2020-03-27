@@ -81,7 +81,7 @@
               [[Result]]
             </td>
             <td>
-              `"ok"` or `"timed-out"`
+              *"ok"* or *"timed-out"*
             </td>
             <td>
               The return value of the call.
@@ -187,7 +187,7 @@
       1. Assert: _waiterRecord_.[[Timeout]] is finite.
       1. Perform EnterCriticalSection(_WL_).
       1. If _waiterRecord_ is in _WL_.[[Waiters]], then
-          1. Set _waiterRecord_.[[Result]] to `"timed-out"`.
+          1. Set _waiterRecord_.[[Result]] to *"timed-out"*.
           1. Perform RemoveWaiter(_WL_, _waiterRecord_).
           1. Perform NotifyWaiter(_WL_, _waiterRecord_).
       1. Perform LeaveCriticalSection(_WL_).
@@ -242,7 +242,7 @@
     <emu-alg>
       1. Assert: The calling agent is in the critical section for _WL_.
       1. <del>Assert: _W_ is on the list of waiters in _WL_.</del>
-      1. <ins>Assert: _waiterRecord_.[[Result]] is either the String `"ok"` or the String `"timed-out"`.</ins>
+      1. <ins>Assert: _waiterRecord_.[[Result]] is either the String *"ok"* or the String *"timed-out"*.</ins>
       1. <del>Notify the agent _W_.</del>
       1. <ins>If _waiterRecord_.[[PromiseCapability]] is *undefined*, then</ins>
         1. <ins>NOTE: An *undefined* promise capability denotes a blocking wait.</ins>
@@ -283,11 +283,11 @@
       1. If _v_ is not equal to _w_, then
         1. Perform LeaveCriticalSection(_WL_).
         1. If _mode_ is ~sync~, then
-          1. Return the String `"not-equal"`.
-        1. Perform ! Call(_capability_.[[Resolve]], *undefined*, &laquo; `"not-equal"` &raquo;).
+          1. Return the String *"not-equal"*.
+        1. Perform ! Call(_capability_.[[Resolve]], *undefined*, &laquo; *"not-equal"* &raquo;).
         1. Return _promiseCapability_.[[Promise]].
       1. Let _W_ be AgentSignifier().
-      1. Let _waiterRecord_ be a new Waiter Record { [[AgentSignifier]]: _W_, [[PromiseCapability]]: _promiseCapability_, [[Timeout]]: _t_, [[Result]]: `"ok"` }.
+      1. Let _waiterRecord_ be a new Waiter Record { [[AgentSignifier]]: _W_, [[PromiseCapability]]: _promiseCapability_, [[Timeout]]: _t_, [[Result]]: *"ok"* }.
       1. Perform AddWaiter(_WL_, _waiterRecord_).
       1. If _mode_ is ~sync~, then
         1. Perform Suspend(_WL_, _W_).
@@ -318,7 +318,7 @@
       1. <del>Let _w_ be ! AtomicLoad(_typedArray_, _i_).</del>
       1. <del>If _v_ is not equal to _w_, then</del>
         1. <del>Perform LeaveCriticalSection(_WL_).</del>
-        1. <del>Return the String `"not-equal"`.</del>
+        1. <del>Return the String *"not-equal"*.</del>
       1. <del>Let _W_ be AgentSignifier().</del>
       1. <del>Perform AddWaiter(_WL_, _W_).</del>
       1. <del>Let _notified_ be Suspend(_WL_, _W_, _t_).</del>
@@ -327,8 +327,8 @@
       1. <del>Else,</del>
         1. <del>Perform RemoveWaiter(_WL_, _W_).</del>
       1. <del>Perform LeaveCriticalSection(_WL_).</del>
-      1. <del>If _notified_ is *true*, return the String `"ok"`.</del>
-      1. <del>Return the String `"timed-out"`.</del>
+      1. <del>If _notified_ is *true*, return the String *"ok"*.</del>
+      1. <del>Return the String *"timed-out"*.</del>
       1. <ins>Return DoWait(~sync~, _typedArray_, _index_, _value_, _timeout_).</ins>
     </emu-alg>
   </emu-clause>
