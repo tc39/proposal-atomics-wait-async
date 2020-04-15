@@ -276,16 +276,24 @@
       1. Let _indexedPosition_ be (_i_ &times; 4) + _offset_.
       1. Let _WL_ be GetWaiterList(_block_, _indexedPosition_).
       1. Let _promiseCapability_ be *undefined*.
+      1. Let _resultObject_ be *undefined*.
       1. If _mode_ is ~async~, then
         1. Set _promiseCapability_ to ! NewPromiseCapability(%Promise%).
+        1. Set _resultObject_ to ! OrdinaryObjectCreate(%Object.prototype%).
       1. Perform EnterCriticalSection(_WL_).
       1. Let _w_ be ! AtomicLoad(_typedArray_, _i_).
       1. If _v_ is not equal to _w_, then
         1. Perform LeaveCriticalSection(_WL_).
         1. If _mode_ is ~sync~, then
           1. Return the String *"not-equal"*.
-        1. Perform ! Call(_capability_.[[Resolve]], *undefined*, &laquo; *"not-equal"* &raquo;).
-        1. Return _promiseCapability_.[[Promise]].
+        1. Perform ! CreateDataPropertyOrThrow(_resultObject_, *"async"*, *false*).
+        1. Perform ! CreateDataPropertyOrThrow(_resultObject_, *"value"*, *"not-equal"*).
+        1. Return _resultObject_.
+      1. If _t_ is 0 and _mode_ is ~async~, then
+        1. NOTE: There is no special handling of synchronous immediate timeouts. Asynchronous immediate timeouts have special handling in order to fail fast and avoid Promise machinery.
+        1. Perform ! CreateDataPropertyOrThrow(_resultObject_, *"async"*, *false*).
+        1. Perform ! CreateDataPropertyOrThrow(_resultObject_, *"value"*, *"timed-out"*).
+        1. Return _resultObject_.
       1. Let _W_ be AgentSignifier().
       1. Let _waiterRecord_ be a new Waiter Record { [[AgentSignifier]]: _W_, [[PromiseCapability]]: _promiseCapability_, [[Timeout]]: _t_, [[Result]]: *"ok"* }.
       1. Perform AddWaiter(_WL_, _waiterRecord_).
@@ -294,7 +302,9 @@
       1. Perform LeaveCriticalSection(_WL_).
       1. If _mode_ is ~sync~, then
         1. Return _waiterRecord_.[[Result]].
-      1. Return _promiseCapability_.[[Promise]].
+      1. Perform ! CreateDataPropertyOrThrow(_resultObject_, *"async"*, *true*).
+      1. Perform ! CreateDataPropertyOrThrow(_resultObject_, *"value"*, _promiseCapability_.[[Promise]]).
+      1. Return _resultObject_.
     </emu-alg>
   </emu-clause>
 
