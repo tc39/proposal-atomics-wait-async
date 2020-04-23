@@ -41,10 +41,24 @@ argument checking fails an exception is thrown synchronously, as for
 * `value` will be converted to Int32 and compared against the contents of `i32a[index]`
 * `timeout`, if present, is a timeout value
 
-The `result` is a promise.  The promise can be resolved with a string
-value, one of `"ok"`, `"timed-out"`, `"not-equal"`; the value has the same
-meaning as for the return type of `Atomics.wait`.  The promise is
+The `result` is an object with an `"async"` property and a `"value"` property.
+
+If `result.async` is `false`, then `result.value` is a string value, one of
+`"not-equal"` or `"timed-out"`. The value has the same meaning as for the
+return type of `Atomics.wait`. A synchronous timeout occurs only occurs when
+`timeout` is 0.
+
+If `result.async` is `true`, then `result.value` is a promise. The promise can
+be resolved with a string value, one of `"ok"`, or `"timed-out"`; the value has
+the same meaning as for the return type of `Atomics.wait`.  The promise is
 never rejected.
+
+The motivation for conditionally returning a promise is so that
+`Atomics.waitAsync` can fail fast for the `"not-equal"` case where no waiting
+happens. It is detrimental to the performance of code that uses
+`Atomics.waitAsync`, such as an asynchronous mutex, to wait a microtask tick
+via an immediately resolved promise to discover that no waiting on a
+SharedArrayBuffer location occurred.
 
 Agents can call `Atomics.notify` on some location corresponding to
 `i32a[index]` to wake any agent waiting with
