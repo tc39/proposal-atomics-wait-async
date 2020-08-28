@@ -1,6 +1,7 @@
-# Atomics.waitAsync (Stage 2 proposal)
+# Atomics.waitAsync
 
-Author: Lars T Hansen (lhansen@mozilla.com), April 2017
+Stage: 3
+Authors: Lars T Hansen (lhansen@mozilla.com) and Shu-yu Guo (syg@google.com)
 
 ## Overview and background
 
@@ -27,7 +28,6 @@ Prior history: Related APIs have been proposed before, indeed one
 variant was in early drafts of the shared memory proposal under the
 name `Atomics.futexWaitCallback`.
 
-
 ## Synopsis
 
 `Atomics.waitAsync(i32a, index, value, [timeout]) => result`
@@ -41,10 +41,13 @@ argument checking fails an exception is thrown synchronously, as for
 * `value` will be converted to Int32 and compared against the contents of `i32a[index]`
 * `timeout`, if present, is a timeout value
 
-The `result` is a promise.  The promise can be resolved with a string
-value, one of `"ok"`, `"timed-out"`, `"not-equal"`; the value has the same
-meaning as for the return type of `Atomics.wait`.  The promise is
-never rejected.
+The `result` is one of the following shapes: `{ async: false, value: "not-equal" }`,
+`{ async: false, value: "timed-out" }`, or `{ async: true, value: promise }`.
+In other words, this API is synchronous if the initial
+comparison fails or is an immediate timeout (i.e. `0`). Otherwise, a promise
+is returned. The promise can be resolved with a string value, one of `"ok"` or
+`"timed-out"`; the value has the same meaning as for the return type of
+`Atomics.wait`.  The promise is never rejected.
 
 Agents can call `Atomics.notify` on some location corresponding to
 `i32a[index]` to wake any agent waiting with
@@ -79,21 +82,18 @@ subsequent to that take action that will cause some agent to perform a
 `notify`.  For this reason, an implementation of `waitAsync` that blocks
 is not viable.
 
-There are two fairness schemes: inter-agent and intra-agent. Among different
-agents, those that wait with `waitAsync` participate in the same fairness
-scheme as those that wait with `wait`: when an agent performs a `notify` with a
-`count` s.t. it does not wake all waiting agents, agents are notified in FIFO
-order of waiting.
-
-In the same agent, `waitAsync`s are notified in FIFO order, while any blocking
-`wait`s are notified first. This is because an agent that is blocking in `wait`
-cannot meaningfully resolve any promises returned by `waitAsync`.
+There is a single fairness scheme among all agents. Those that wait with
+`waitAsync` participate in the same fairness scheme as those that wait with
+`wait`: when an agent performs a `notify` with a `count` s.t. it does not wake
+all waiting agents, agents are notified in FIFO order of waiting.
 
 ## Semantics
 
 See the [draft spec text](https://tc39.github.io/proposal-atomics-wait-async/).
 
 ## Polyfills
+
+(NOTE: The current polyfill is out of date.)
 
 A simple polyfill is possible.
 
@@ -141,11 +141,13 @@ strategy for Firefox, for example).
 
 ## Performance and optimizations
 
-### Synchronous resolution (rejected)
+### Synchronous resolution (rejected, then accepted)
 
-For performance reasons it might appear that it is desirable to
-"resolve the promise synchronously" if possible.  Leaving aside what
-that would mean for a minute, this was explored and the committee
-decided it did not like the complexity of it.  Additionally, it's easy
-enough to handle manually when it is necessary.  See SYNC-RESOLVE.md
-for a writeup of the details around this idea.
+For performance reasons it might appear that it is desirable to "resolve the
+promise synchronously" if possible.  Leaving aside what that would mean for a
+minute, this was explored and the committee decided it did not like the
+complexity of it initially out of concern for "zalgo", i.e. that APIs that
+return promises ought to always return promises. This API was subsequently
+revised to instead always return an object that would signal if the resolution
+was synchronous or asynchronous. See SYNC-RESOLVE.md for a historical writeup
+of the details around this idea.
