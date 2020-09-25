@@ -21,9 +21,9 @@
   <h1>Semantics</h1>
 
   <emu-clause id="sec-hostresolveinagent" aoid="HostResolveInAgent">
-    <h1>HostResolveInAgent ( _agentSignifier_, _promise_, _resolution_)</h1>
+    <h1>HostResolveInAgent ( _agentSignifier_, _promiseCapability_, _resolution_)</h1>
     <p><ins>This is a new section.</ins></p>
-    <p>HostResolveInAgent is an implementation-defined abstract operation that takes three arguments, an agent signifier _agentSignifier_, a Promise Object _promise_, and a value _resolution_. The host's responsibility is to resolve _promise_ in the agent signified by _agentSignifier_ with _resolution_ in finite time. The host may delay resolving _promise_ in _agentSignifier_, e.g. for resource management reasons, but the promise must eventually be resolved.</p>
+    <p>HostResolveInAgent is an implementation-defined abstract operation that takes three arguments, an agent signifier _agentSignifier_, a PromiseCapability Record _promiseCapability_, and a value _resolution_. The host's responsibility is to resolve _promiseCapability_ in the agent signified by _agentSignifier_ with _resolution_ in finite time. The host may delay resolving _promiseCapability_ in _agentSignifier_, e.g. for resource management reasons, but the promise must eventually be resolved.</p>
   </emu-clause>
 
   <emu-clause id="sec-getwaiterlist">
@@ -248,7 +248,7 @@
         1. <ins>NOTE: An *undefined* promise capability denotes a blocking wait.</ins>
         1. <ins>Notify the agent _waiterRecord_.[[AgentSignifier]].</ins>
       1. <ins>Else,</ins>
-        1. <ins>Perform HostResolveInAgent(_waiterRecord_.[[AgentSignifier]], _waiterRecord_.[[PromiseCapability]].[[Promise]], _waiterRecord_.[[Result]])</ins>
+        1. <ins>Perform HostResolveInAgent(_waiterRecord_.[[AgentSignifier]], _waiterRecord_.[[PromiseCapability]], _waiterRecord_.[[Result]])</ins>
         1. <ins>NOTE: An agent must not access another agent's promise capability in any capacity beyond passing it to the host.</ins>
     </emu-alg>
     <emu-note>
