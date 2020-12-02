@@ -20,15 +20,17 @@
 <emu-clause id="sec-semantics">
   <h1>Semantics</h1>
 
+  <ins class="block">
   <emu-clause id="sec-hostresolveinagent" aoid="HostResolveInAgent">
     <h1>HostResolveInAgent ( _agentSignifier_, _promiseCapability_, _resolution_)</h1>
-    <p><ins>This is a new section.</ins></p>
     <p>HostResolveInAgent is an implementation-defined abstract operation that takes three arguments, an agent signifier _agentSignifier_, a PromiseCapability Record _promiseCapability_, and a value _resolution_. The host's responsibility is to resolve _promiseCapability_ in the agent signified by _agentSignifier_ with _resolution_ in finite time. The host may delay resolving _promiseCapability_ in _agentSignifier_, e.g. for resource management reasons, but the promise must eventually be resolved.</p>
   </emu-clause>
+  </ins>
 
   <emu-clause id="sec-getwaiterlist">
     <h1>GetWaiterList ( _block_, _i_ )</h1>
-    <p><ins>A <dfn>Waiter Record</dfn> is a Record value used to denote a particular call to `Atomics.wait` or `Atomics.waitAsync`. It has fields as defined by <emu-xref href="#table-waiterrecord"></emu-xref>.</ins></p>
+    <ins class="block">
+    <p>A <dfn id="waiter-record">Waiter Record</dfn> is a Record value used to denote a particular call to `Atomics.wait` or `Atomics.waitAsync`. It has fields as defined by <emu-xref href="#table-waiterrecord"></emu-xref>.</p>
     <emu-table id="table-waiterrecord" caption="Waiter Record Fields">
       <table>
         <tbody>
@@ -90,7 +92,10 @@
         </tbody>
       </table>
     </emu-table>
-    <p>A <dfn>WaiterList</dfn> is a <del>semantic object that contains an ordered List of those agents that are waiting on a location (_block_, _i_) in shared memory; _block_ is a Shared Data Block and _i_ a byte offset into the memory of _block_. A WaiterList object also optionally contains a Synchronize event denoting the previous leaving of its critical section.</del><ins>Record value used to explain waiting and notification of agents via `Atomics.wait`, `Atomics.waitAsync`, and `Atomics.notify`. It has fields as defined by <emu-xref href="#table-waiterlist"></emu-xref>.</ins></p>
+    </ins>
+    <del class="block"><p>A <dfn>WaiterList</dfn> is a semantic object that contains an ordered List of those agents that are waiting on a location (_block_, _i_) in shared memory; _block_ is a Shared Data Block and _i_ a byte offset into the memory of _block_. A WaiterList object also optionally contains a Synchronize event denoting the previous leaving of its critical section.</p></del>
+    <ins class="block">
+    <p>A <dfn id="waiterlist-record">WaiterList Record</dfn> is a Record value used to explain waiting and notification of agents via `Atomics.wait`, `Atomics.waitAsync`, and `Atomics.notify`. It has fields as defined by <emu-xref href="#table-waiterlist"></emu-xref>.</p>
     <emu-table id="table-waiterlist" caption="WaiterList Record Fields">
       <table>
         <tbody>
@@ -110,7 +115,7 @@
               [[Waiters]]
             </td>
             <td>
-              An ordered List of Waiter Records
+              An ordered List of <emu-xref href="#waiter-record">Waiter Records</emu-xref>
             </td>
             <td>
               The calls to `Atomics.wait` or `Atomics.waitAsync` that are waiting on the location with which this WaiterList is associated.
@@ -130,7 +135,8 @@
         </tbody>
       </table>
     </emu-table>
-    <p><ins>There can be multiple Waiter Records in a WaiterList with the same agent signifier.</ins></p>
+    <p>There can be multiple Waiter Records in a WaiterList with the same agent signifier.</p>
+    </ins>
     <p>The agent cluster has a store of WaiterList <del>objects</del><ins>Records</ins>; the store is indexed by (_block_, _i_)<ins>, where _block_ is a Shared Data Block and _i_ a byte offset into the memory of _block_</ins>. WaiterLists are agent-independent: a lookup in the store of WaiterLists by (_block_, _i_) will result in the same WaiterList object in any agent in the agent cluster.</p>
     <p>Operations on a WaiterList&mdash;adding and removing waiting agents, traversing the list of agents, suspending and notifying agents on the list, setting and retrieving the Synchronize event&mdash;may only be performed by agents that have entered the WaiterList's critical section.</p>
     <emu-note>
@@ -179,9 +185,9 @@
     </emu-alg>
   </emu-clause>
 
+  <ins class="block">
   <emu-clause id="sec-triggertimeout" aoid="TriggerTimeout">
     <h1>TriggerTimeout( _WL_, _waiterRecord_ )</h1>
-    <p><ins>This is a new abstract operation.</ins></p>
     <p>The abstract operation TriggerTimeout takes two arguments, a WaiterList _WL_ and a Waiter Record _waiterRecord_. It performs the following steps:</p>
     <emu-alg>
       1. Assert: _waiterRecord_.[[Timeout]] is finite.
@@ -193,6 +199,7 @@
       1. Perform LeaveCriticalSection(_WL_).
     </emu-alg>
   </emu-clause>
+  </ins>
 
   <emu-clause id="sec-addwaiter" aoid="AddWaiter">
     <h1>AddWaiter ( _WL_, <del>_W_</del><ins>_waiterRecord_</ins> )</h1>
@@ -256,9 +263,9 @@
     </emu-note>
   </emu-clause>
 
+  <ins class="block">
   <emu-clause id="sec-dowait" aoid="DoWait">
     <h1>DoWait ( _mode_, _typedArray_, _index_, _value_, _timeout_ )</h1>
-    <p><ins>This is a new abstract operation.</ins></p>
     <p>The abstract operation DoWait takes five arguments, _mode_ which is one of (~sync~, ~async~), and values _typedArray_, _idnex_, _value_, and _timeout_. It performs the following steps:</p>
     <emu-alg>
       1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_, *true*).
@@ -308,6 +315,7 @@
       1. Return _resultObject_.
     </emu-alg>
   </emu-clause>
+  </ins>
 
   <emu-clause id="sec-atomics.wait">
     <h1>Atomics.wait ( _typedArray_, _index_, _value_, _timeout_ )</h1>
@@ -344,13 +352,13 @@
     </emu-alg>
   </emu-clause>
 
+  <ins class="block">
   <emu-clause id="atomics.waitasync">
     <h1>Atomics.waitAsync ( _typedArray_, _index_, _value_, _timeout_ )</h1>
-    <p><ins>This is a new method.</ins></p>
     <p>`Atomics.waitAsync` returns a Promise that is resolved when the calling agent is notified or the sleep times out. The following steps are taken:</p>
     <emu-alg>
       1. Return DoWait(~async~, _typedArray_, _index_, _value_, _timeout_).
     </emu-alg>
   </emu-clause>
-
+  </ins>
 </emu-clause>
