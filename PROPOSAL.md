@@ -93,7 +93,10 @@ See the [draft spec text](https://tc39.github.io/proposal-atomics-wait-async/).
 
 ## Polyfills
 
-(NOTE: The current polyfill is out of date.)
+(NOTE: The current polyfill is out of date and no longer maintained. Further,
+the proposal cannot be polyfilled in a high-fidelity manner using
+`Atomics.wait`, because there is no atomics way to synchronously handle the
+`"not-equal"` case.)
 
 A simple polyfill is possible.
 
