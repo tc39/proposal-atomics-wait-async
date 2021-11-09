@@ -66,25 +66,89 @@
         helpers.push(h);
     }
 
+    function ToBigInt64(value) {
+        let n = BigInt(value);
+        let int64bit = n % (2n ** 64n);
+        if (int64bit > (2n ** 63n)) {
+            return int64bit - (2n ** 64n);
+        }
+        return int64bit;
+    }
+
+    function ToInteger(value) {
+        let number = Number(value);
+        if (number !== number) {
+            return 0;
+        }
+        if (number === 0 || !Number.isFinite(number)) {
+            return number;
+        }
+
+        return (number > 0 ? 1 : -1) * Math.floor(Math.abs(number));
+    }
+
+    function ToLength(value) {
+        var len = ToInteger(value);
+        if (len <= 0) {
+            return 0;
+        }
+        if (len > Number.MAX_SAFE_INTEGER) {
+            return Number.MAX_SAFE_INTEGER;
+        }
+        return len;
+    }
+
+    function ToIndex(value) {
+        let index;
+        if (value === undefined) {
+            index = 0;
+        } else {
+            let integerIndex = ToInteger(value);
+            if (integerIndex < 0) {
+                throw new RangeError('Index out of range');
+            }
+            index = ToLength(integerIndex);
+            if (integerIndex !== index) {
+                throw new RangeError('Index out of range');
+            }
+        }
+        return index;
+    }
+
+    function ValidateAtomicAccess(typedArray, requestIndex) {
+        let accessIndex;
+        try {
+            accessIndex = ToIndex(requestIndex);
+        } catch (error) {
+            if (error instanceof RangeError) {
+                throw new RangeError('Invalid atomic access index');
+            }
+        }
+        let length = typedArray.length;
+        if (accessIndex >= length) {
+            throw new RangeError('Invalid atomic access index');
+        }
+        return accessIndex;
+    }
+
     // Atomics.waitAsync always returns a promise.  Throws standard errors
     // for parameter validation.  The promise is resolved with a string as from
     // Atomics.wait, or, in the case something went completely wrong, it is
     // rejected with an error string.
 
     function waitAsync(ia, index_, value_, timeout_) {
-        if (typeof ia != "object" || !(ia instanceof Int32Array) || !(ia.buffer instanceof SharedArrayBuffer))
-            throw new TypeError("Expected shared memory");
+        if (typeof ia != "object" ||
+            (!(ia instanceof Int32Array) && !(ia instanceof BigInt64Array)) ||
+            !(ia.buffer instanceof SharedArrayBuffer)) {
+                throw new TypeError("Expected shared memory");
+        }
 
         // These conversions only approximate the desired semantics but are
         // close enough for the polyfill.
-
-        let index = index_|0;
-        let value = value_|0;
+        let index = ValidateAtomicAccess(ia, index_);
+        let coersion = ia instanceof BigInt64Array ? (v => ToBigInt64(v)) : (v => v|0);
+        let value = coersion(value_);
         let timeout = timeout_ === undefined ? Infinity : +timeout_;
-
-        // Range checking for the index.
-
-        ia[index];
 
         // Optimization, avoid the helper thread in this common case.
 
@@ -136,4 +200,3 @@
         writable: true,
     });
 })();
-
